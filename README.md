@@ -1,10 +1,4 @@
-<p align="center">
-  <a href="https://github.com/strveJs/strve" target="_blank" rel="noopener noreferrer">
-    <img width="180" src="https://strvejs.github.io/strve-doc/logo.png" alt="Strve logo">
-  </a>
-</p>
-
-# Strve
+# Strve.js
 
 A approachable, fast, flexible and lightweight JavaScript library for building user interfaces.
 
@@ -19,10 +13,6 @@ To learn more about Strve, check [its documentation](https://strvejs.github.io/s
 ## ChangeLog
 
 [https://strvejs.github.io/strve-doc/changeLog/](https://strvejs.github.io/strve-doc/changeLog/)
-
-## Usage Trends
-
-https://npm-compare.com/strve-js
 
 ## License
 
