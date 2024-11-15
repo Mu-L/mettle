@@ -1,0 +1,52 @@
+{
+  "name": "strve-js",
+  "version": "6.8.0",
+  "description": "A approachable, fast, flexible and lightweight JavaScript library for building user interfaces.",
+  "main": "dist/strve.full.js",
+  "module": "dist/strve.runtime-esm.js",
+  "unpkg": "dist/strve.full.prod.js",
+  "jsdelivr": "dist/strve.full.prod.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "tsc": "tsc",
+    "build": "tsc && npm run build-red && npm run build-rep && npm run build-fed && npm run build-fep && npm run build-fd && npm run build-fp",
+    "build-red": "rollup -c config/index.js --environment TARGET:runtime-esm-dev",
+    "build-rep": "rollup -c config/index.js --environment TARGET:runtime-esm-prod",
+    "build-fed": "rollup -c config/index.js --environment TARGET:full-esm-dev",
+    "build-fep": "rollup -c config/index.js --environment TARGET:full-esm-prod",
+    "build-fd": "rollup -c config/index.js --environment TARGET:full-dev",
+    "build-fp": "rollup -c config/index.js --environment TARGET:full-prod"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/strveJs/strve"
+  },
+  "private": false,
+  "keywords": [
+    "strve",
+    "strvejs",
+    "strve-js",
+    "dom",
+    "mvvm",
+    "virtual dom",
+    "html",
+    "template",
+    "string",
+    "view",
+    "javascript"
+  ],
+  "author": "maomincoding",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/strveJs/strve/issues"
+  },
+  "homepage": "https://github.com/strveJs/strve#readme",
+  "devDependencies": {
+    "@rollup/plugin-replace": "^5.0.2",
+    "@rollup/plugin-terser": "^0.4.4",
+    "rollup": "^2.57.0",
+    "typescript": "^4.6.3"
+  }
+}
