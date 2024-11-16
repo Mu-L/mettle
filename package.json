@@ -1,11 +1,11 @@
 {
   "name": "amazed",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A approachable, fast, flexible and lightweight JavaScript library for building user interfaces.",
-  "main": "dist/strve.full.js",
-  "module": "dist/strve.runtime-esm.js",
-  "unpkg": "dist/strve.full.prod.js",
-  "jsdelivr": "dist/strve.full.prod.js",
+  "main": "dist/amazed.full.js",
+  "module": "dist/amazed.runtime-esm.js",
+  "unpkg": "dist/amazed.full.prod.js",
+  "jsdelivr": "dist/amazed.full.prod.js",
   "files": [
     "dist"
   ],
@@ -21,13 +21,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/strveJs/strve"
+    "url": "https://github.com/maomincoding/amazed"
   },
   "private": false,
   "keywords": [
-    "strve",
-    "strvejs",
-    "strve-js",
+    "amazed",
+    "amazedjs",
+    "amazed-js",
     "dom",
     "mvvm",
     "virtual dom",
@@ -40,9 +40,9 @@
   "author": "maomincoding",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/strveJs/strve/issues"
+    "url": "https://github.com/maomincoding/amazed/issues"
   },
-  "homepage": "https://github.com/strveJs/strve#readme",
+  "homepage": "https://github.com/maomincoding/amazed#readme",
   "devDependencies": {
     "@rollup/plugin-replace": "^5.0.2",
     "@rollup/plugin-terser": "^0.4.4",

@@ -9,7 +9,7 @@ const resolve = (p) => {
 
 const banner =
   '/*!\n' +
-  ` * Strve.js v${version}\n` +
+  ` * Amazed.js v${version}\n` +
   ` * (c) 2021-${new Date().getFullYear()} maomincoding\n` +
   ' * Released under the MIT License.\n' +
   ' */';
@@ -19,7 +19,7 @@ const builds = {
   'runtime-esm-dev': {
     input: resolve('config/input-runtime-esm.js'),
     output: {
-      file: resolve('dist/strve.runtime-esm.js'),
+      file: resolve('dist/amazed.runtime-esm.js'),
       format: 'es',
       banner,
       exports: 'auto',
@@ -30,7 +30,7 @@ const builds = {
   'runtime-esm-prod': {
     input: resolve('config/input-runtime-esm.js'),
     output: {
-      file: resolve('dist/strve.runtime-esm.prod.js'),
+      file: resolve('dist/amazed.runtime-esm.prod.js'),
       format: 'es',
       banner,
       exports: 'auto',
@@ -41,7 +41,7 @@ const builds = {
   'full-esm-dev': {
     input: resolve('config/input-full-esm.js'),
     output: {
-      file: resolve('dist/strve.full-esm.js'),
+      file: resolve('dist/amazed.full-esm.js'),
       format: 'es',
       banner,
       exports: 'auto',
@@ -52,7 +52,7 @@ const builds = {
   'full-esm-prod': {
     input: resolve('config/input-full-esm.js'),
     output: {
-      file: resolve('dist/strve.full-esm.prod.js'),
+      file: resolve('dist/amazed.full-esm.prod.js'),
       format: 'es',
       banner,
       exports: 'auto',
@@ -63,10 +63,10 @@ const builds = {
   'full-dev': {
     input: resolve('config/input-full-esm.js'),
     output: {
-      file: resolve('dist/strve.full.js'),
+      file: resolve('dist/amazed.full.js'),
       format: 'umd',
       banner,
-      name: 'Strve',
+      name: 'Amazed',
       exports: 'auto',
     },
     plugins: [],
@@ -75,10 +75,10 @@ const builds = {
   'full-prod': {
     input: resolve('config/input-full-esm.js'),
     output: {
-      file: resolve('dist/strve.full.prod.js'),
+      file: resolve('dist/amazed.full.prod.js'),
       format: 'umd',
       banner,
-      name: 'Strve',
+      name: 'Amazed',
       exports: 'auto',
     },
     plugins: [terser()],
@@ -88,7 +88,7 @@ const builds = {
 const config = builds[process.env.TARGET];
 const vars = {
   __VERSION__: version,
-  preventAssignment: true
+  preventAssignment: true,
 };
 config['plugins'].push(replace(vars));
 

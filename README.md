@@ -1,4 +1,4 @@
-# Strve.js
+# Amazed.js
 
 A approachable, fast, flexible and lightweight JavaScript library for building user interfaces.
 
@@ -8,11 +8,11 @@ A approachable, fast, flexible and lightweight JavaScript library for building u
 
 ## Documentation
 
-To learn more about Strve, check [its documentation](https://strvejs.github.io/strve-doc/).
+To learn more about Amazed, check [its documentation](https://maomincoding.github.io/amazed-doc/).
 
 ## ChangeLog
 
-[https://strvejs.github.io/strve-doc/changeLog/](https://strvejs.github.io/strve-doc/changeLog/)
+[https://maomincoding.github.io/strve-doc/changeLog/](https://maomincoding.github.io/amazed-doc/changeLog/)
 
 ## License
 
