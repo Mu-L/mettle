@@ -1,6 +1,6 @@
 {
-  "name": "amazed",
-  "version": "0.0.2",
+  "name": "mettle",
+  "version": "0.1.0",
   "description": "A approachable, fast, flexible and lightweight JavaScript library for building user interfaces.",
   "main": "dist/amazed.full.js",
   "module": "dist/amazed.runtime-esm.js",
