@@ -123,7 +123,7 @@ function checkVnode(vnodes: Array<vnodeType> | vnodeType): boolean {
 }
 
 function warn(msg: string) {
-  console.warn(`[Amazed.js warn]: ${msg}`);
+  console.warn(`[Mettle.js warn]: ${msg}`);
 }
 
 function setStyleProp(el: HTMLElement, prototype: { [key: string]: string }) {

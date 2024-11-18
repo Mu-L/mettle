@@ -1,11 +1,11 @@
 {
   "name": "mettle",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A approachable, fast, flexible and lightweight JavaScript library for building user interfaces.",
-  "main": "dist/amazed.full.js",
-  "module": "dist/amazed.runtime-esm.js",
-  "unpkg": "dist/amazed.full.prod.js",
-  "jsdelivr": "dist/amazed.full.prod.js",
+  "main": "dist/mettle.full.js",
+  "module": "dist/mettle.runtime-esm.js",
+  "unpkg": "dist/mettle.full.prod.js",
+  "jsdelivr": "dist/mettle.full.prod.js",
   "files": [
     "dist"
   ],
@@ -21,13 +21,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/maomincoding/amazed"
+    "url": "https://github.com/maomincoding/mettle"
   },
   "private": false,
   "keywords": [
-    "amazed",
-    "amazedjs",
-    "amazed-js",
+    "mettle",
+    "mettlejs",
+    "mettle-js",
     "dom",
     "mvvm",
     "virtual dom",
@@ -40,9 +40,9 @@
   "author": "maomincoding",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/maomincoding/amazed/issues"
+    "url": "https://github.com/maomincoding/mettle/issues"
   },
-  "homepage": "https://github.com/maomincoding/amazed#readme",
+  "homepage": "https://github.com/maomincoding/mettle#readme",
   "devDependencies": {
     "@rollup/plugin-replace": "^5.0.2",
     "@rollup/plugin-terser": "^0.4.4",

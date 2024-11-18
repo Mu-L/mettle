@@ -1,12 +1,12 @@
 /*!
- * Amazed.js v0.0.2
+ * Mettle.js v0.1.1
  * (c) 2021-2024 maomincoding
  * Released under the MIT License.
  */
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
     typeof define === 'function' && define.amd ? define(['exports'], factory) :
-    (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.Amazed = {}));
+    (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.Mettle = {}));
 })(this, (function (exports) { 'use strict';
 
     const MODE_SLASH = 0;
@@ -295,7 +295,7 @@
         return Array.isArray(vnodes) ? isArrayVnode(vnodes) : isVnode(vnodes);
     }
     function warn(msg) {
-        console.warn(`[Amazed.js warn]: ${msg}`);
+        console.warn(`[Mettle.js warn]: ${msg}`);
     }
     function setStyleProp(el, prototype) {
         Object.assign(el.style, prototype);
@@ -397,7 +397,7 @@
     }
 
     // version
-    const version = '0.0.2';
+    const version = '0.1.1';
     // Flag
     const flag = ['$ref', '$is'];
     // DomInfo

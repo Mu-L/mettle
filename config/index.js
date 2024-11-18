@@ -9,7 +9,7 @@ const resolve = (p) => {
 
 const banner =
   '/*!\n' +
-  ` * Amazed.js v${version}\n` +
+  ` * Mettle.js v${version}\n` +
   ` * (c) 2021-${new Date().getFullYear()} maomincoding\n` +
   ' * Released under the MIT License.\n' +
   ' */';
@@ -19,7 +19,7 @@ const builds = {
   'runtime-esm-dev': {
     input: resolve('config/input-runtime-esm.js'),
     output: {
-      file: resolve('dist/amazed.runtime-esm.js'),
+      file: resolve('dist/mettle.runtime-esm.js'),
       format: 'es',
       banner,
       exports: 'auto',
@@ -30,7 +30,7 @@ const builds = {
   'runtime-esm-prod': {
     input: resolve('config/input-runtime-esm.js'),
     output: {
-      file: resolve('dist/amazed.runtime-esm.prod.js'),
+      file: resolve('dist/mettle.runtime-esm.prod.js'),
       format: 'es',
       banner,
       exports: 'auto',
@@ -41,7 +41,7 @@ const builds = {
   'full-esm-dev': {
     input: resolve('config/input-full-esm.js'),
     output: {
-      file: resolve('dist/amazed.full-esm.js'),
+      file: resolve('dist/mettle.full-esm.js'),
       format: 'es',
       banner,
       exports: 'auto',
@@ -52,7 +52,7 @@ const builds = {
   'full-esm-prod': {
     input: resolve('config/input-full-esm.js'),
     output: {
-      file: resolve('dist/amazed.full-esm.prod.js'),
+      file: resolve('dist/mettle.full-esm.prod.js'),
       format: 'es',
       banner,
       exports: 'auto',
@@ -63,10 +63,10 @@ const builds = {
   'full-dev': {
     input: resolve('config/input-full-esm.js'),
     output: {
-      file: resolve('dist/amazed.full.js'),
+      file: resolve('dist/mettle.full.js'),
       format: 'umd',
       banner,
-      name: 'Amazed',
+      name: 'Mettle',
       exports: 'auto',
     },
     plugins: [],
@@ -75,10 +75,10 @@ const builds = {
   'full-prod': {
     input: resolve('config/input-full-esm.js'),
     output: {
-      file: resolve('dist/amazed.full.prod.js'),
+      file: resolve('dist/mettle.full.prod.js'),
       format: 'umd',
       banner,
-      name: 'Amazed',
+      name: 'Mettle',
       exports: 'auto',
     },
     plugins: [terser()],

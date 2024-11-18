@@ -1,4 +1,4 @@
-# Amazed.js
+# Mettle.js
 
 A approachable, fast, flexible and lightweight JavaScript library for building user interfaces.
 
@@ -8,11 +8,11 @@ A approachable, fast, flexible and lightweight JavaScript library for building u
 
 ## Documentation
 
-To learn more about Amazed, check [its documentation](https://maomincoding.github.io/amazed-doc/).
+To learn more about mettle, check [its documentation](https://maomincoding.github.io/mettle-doc/).
 
 ## ChangeLog
 
-[https://maomincoding.github.io/strve-doc/changeLog/](https://maomincoding.github.io/amazed-doc/changeLog/)
+[https://maomincoding.github.io/strve-doc/changeLog/](https://maomincoding.github.io/mettle-doc/changeLog/)
 
 ## License
 
