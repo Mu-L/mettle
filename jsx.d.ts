@@ -113,6 +113,7 @@ export namespace JSX {
   }
   interface CustomAttributes<T> {
     $ref?: any;
+    key?: any;
     ref?: T | ((el: T) => void) | undefined;
     classList?:
       | {
