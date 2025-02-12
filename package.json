@@ -1,13 +1,17 @@
 {
   "name": "mettle",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "A approachable, fast, flexible and lightweight JavaScript library for building user interfaces.",
   "main": "dist/mettle.full.js",
   "module": "dist/mettle.runtime-esm.js",
   "unpkg": "dist/mettle.full.prod.js",
   "jsdelivr": "dist/mettle.full.prod.js",
+  "types": "types/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "types",
+    "jsx.d.ts",
+    "jsx-runtime.d.ts"
   ],
   "scripts": {
     "tsc": "tsc",

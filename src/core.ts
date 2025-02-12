@@ -308,7 +308,7 @@ function patchKeyChildren(n1: Array<vnodeType>, n2: Array<vnodeType>, parentElm:
 }
 
 // Change data
-async function setData(callback: () => void, content: any) {
+async function setData(callback: () => void, content?: any) {
   if (typeof callback === 'function' && typeof Promise !== 'undefined') {
     try {
       await Promise.resolve(callback());
@@ -419,6 +419,11 @@ function normalizeContainer(container: Element | DocumentFragment | Comment | nu
   }
 }
 
+interface OptionsProps {
+  content: any;
+  setData: (data: () => void) => Promise<void>;
+}
+
 // Define Component
 function defineComponent(options?: any, factory?: any) {
   if (typeof options === 'function') {
@@ -431,7 +436,7 @@ function defineComponent(options?: any, factory?: any) {
     static instance: Component;
 
     constructor() {
-      const param = { content: this, setData: setData.bind(this) };
+      const param: OptionsProps = { content: this, setData: setData.bind(this) };
       const template = factory.call(this, param);
       this.template = template;
 
@@ -458,4 +463,13 @@ function defineComponent(options?: any, factory?: any) {
   return Component.getInstance();
 }
 
-export { version, resetView, setData, defineComponent, domInfo, onMounted, onUnmounted };
+export {
+  version,
+  resetView,
+  setData,
+  defineComponent,
+  domInfo,
+  onMounted,
+  onUnmounted,
+  OptionsProps,
+};

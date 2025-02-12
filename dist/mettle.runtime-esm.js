@@ -1,6 +1,6 @@
 /*!
- * Mettle.js v0.2.1
- * (c) 2021-2024 maomincoding
+ * Mettle.js v0.3.0
+ * (c) 2021-2025 maomincoding
  * Released under the MIT License.
  */
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Element
@@ -196,7 +196,7 @@ function getSequence(arr) {
 }
 
 // version
-const version = '0.2.1';
+const version = '0.3.0';
 // Flag
 const flag = ['$ref', '$is'];
 // DomInfo
