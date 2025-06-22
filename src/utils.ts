@@ -75,11 +75,6 @@ function getType(v: any): string {
     .toLowerCase();
 }
 
-const typeData: string[] = ['object', 'array', 'function', 'regexp', 'date', 'math'];
-function isComplexType(v: any): boolean {
-  return typeData.includes(getType(v));
-}
-
 function isUndef(v: any): boolean {
   return v === undefined || v === null;
 }
@@ -238,7 +233,6 @@ function getSequence(arr: number[]): number[] {
 
 export {
   getType,
-  isComplexType,
   isUndef,
   checkSameVnode,
   isVnode,

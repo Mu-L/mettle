@@ -1,5 +1,5 @@
 /*!
- * Mettle.js v0.3.1
+ * Mettle.js v0.5.0
  * (c) 2021-2025 maomincoding
  * Released under the MIT License.
  */
@@ -263,10 +263,6 @@
             .match(/\[object (.+?)\]/)[1]
             .toLowerCase();
     }
-    const typeData = ['object', 'array', 'function', 'regexp', 'date', 'math'];
-    function isComplexType(v) {
-        return typeData.includes(getType(v));
-    }
     function isUndef(v) {
         return v === undefined || v === null;
     }
@@ -397,39 +393,35 @@
     }
 
     // version
-    const version = '0.3.1';
+    const version = '0.5.0';
     // Flag
-    const flag = ['$ref', '$is'];
+    const flag = ['$ref', '$is', '$once', '$memo'];
     // DomInfo
     const domInfo = new WeakMap();
     // Component
     let componentMap = new WeakMap();
     // Update text node
     function updateTextNode(val, el) {
-        let _text = '';
-        if (Array.isArray(val)) {
-            if (val.length > 1) {
-                let _texts = [];
-                for (let index = 0; index < val.length; index++) {
-                    const c = val[index];
-                    _texts.push(isComplexType(c) ? JSON.stringify(c) : c);
+        el.textContent = val;
+    }
+    // Create el for the child elements of the element marked with $memo
+    function memoCreateEl(oNode, nNode) {
+        const oldChildren = oNode.children;
+        const newChildren = nNode.children;
+        const childrenType = getType(newChildren);
+        if (childrenType === 'array') {
+            for (let index = 0; index < newChildren.length; index++) {
+                const newChild = newChildren[index];
+                const oldChild = oldChildren[index];
+                if (isVnode(newChild)) {
+                    newChild.el = oldChild.el;
+                    memoCreateEl(oldChild, newChild);
                 }
-                _text = _texts.join('');
-            }
-            else if (val.length === 0) {
-                _text = '';
-            }
-            else {
-                _text = JSON.stringify(val).replace(/,/g, '');
             }
         }
-        else if (isComplexType(val)) {
-            _text = JSON.stringify(val);
+        else if (childrenType === 'object') {
+            newChildren.el = oldChildren.el;
         }
-        else {
-            _text = val;
-        }
-        el.textContent = _text;
     }
     // Convert virtual dom to real dom
     function mount(vnode, container, anchor) {
@@ -502,74 +494,101 @@
         }
     }
     // Diff
-    function patch(oNode, nNode) {
-        if (notTagComponent(oNode, nNode)) {
-            if (!checkSameVnode(oNode, nNode)) {
-                const parent = oNode.el.parentNode;
-                const anchor = oNode.el.nextSibling;
-                parent.removeChild(oNode.el);
-                mount(nNode, parent, anchor);
+    function patch(oNode, nNode, memoFlag) {
+        // $once
+        if (oNode.props && oNode.props.hasOwnProperty(flag[2])) {
+            return;
+        }
+        if (!notTagComponent(oNode, nNode)) {
+            return;
+        }
+        if (!checkSameVnode(oNode, nNode)) {
+            const parent = oNode.el.parentNode;
+            const anchor = oNode.el.nextSibling;
+            parent.removeChild(oNode.el);
+            mount(nNode, parent, anchor);
+        }
+        else {
+            const el = (nNode.el = oNode.el);
+            // props
+            const oldProps = oNode.props || {};
+            const newProps = nNode.props || {};
+            const allKeys = {};
+            const newKeys = Object.keys(newProps);
+            const oldKeys = Object.keys(oldProps);
+            const newKeySet = new Set(newKeys);
+            for (let i = 0; i < newKeys.length; i++) {
+                allKeys[newKeys[i]] = true;
             }
-            else {
-                const el = (nNode.el = oNode.el);
-                // props
-                const oldProps = oNode.props || {};
-                const newProps = nNode.props || {};
-                const newKeys = Object.keys(newProps);
-                const oldKeys = Object.keys(oldProps);
-                for (let index = 0; index < newKeys.length; index++) {
-                    const key = newKeys[index];
-                    const newValue = newProps[key];
-                    const oldValue = oldProps[key];
-                    const newPropValueType = getType(newValue);
-                    if (newValue !== oldValue) {
-                        if (!isUndef(newValue)) {
-                            if (newPropValueType !== 'function' && key !== 'key' && !flag.includes(key)) {
-                                setAttribute(el, key, newValue);
-                            }
-                            if (key === 'style' && newPropValueType === 'object') {
-                                setStyleProp(el, newValue);
-                            }
-                            if (newPropValueType === 'function' && newValue.toString() !== oldValue.toString()) {
-                                removeEventListener(el, key, oldValue);
-                                addEventListener(el, key, newValue);
-                            }
-                        }
-                        else {
-                            removeAttribute(el, key);
-                        }
+            for (let i = 0; i < oldKeys.length; i++) {
+                allKeys[oldKeys[i]] = true;
+            }
+            const keys = Object.keys(allKeys);
+            for (let index = 0; index < keys.length; index++) {
+                const key = keys[index];
+                const newValue = newProps[key];
+                const oldValue = oldProps[key];
+                if (newValue === oldValue)
+                    continue;
+                if (isUndef(newValue)) {
+                    removeAttribute(el, key);
+                    continue;
+                }
+                const newType = getType(newValue);
+                const isFunc = newType === 'function';
+                const isStyle = key === 'style';
+                if (isFunc) {
+                    if (newValue.toString() !== oldValue.toString()) {
+                        removeEventListener(el, key, oldValue);
+                        addEventListener(el, key, newValue);
                     }
+                    continue;
                 }
-                for (let index = 0; index < oldKeys.length; index++) {
-                    const key = oldKeys[index];
-                    if (!newKeys.includes(key)) {
-                        removeAttribute(el, key);
-                    }
+                if (isStyle && newType === 'object') {
+                    setStyleProp(el, newValue);
+                    continue;
                 }
-                // children
-                const oc = oNode.children;
-                const nc = nNode.children;
-                if (getType(oc) === 'array' && getType(nc) === 'array') {
-                    patchKeyChildren(oc, nc, el);
+                const isRegularAttr = key !== 'key' && !flag.includes(key);
+                if (isRegularAttr && !isFunc) {
+                    setAttribute(el, key, newValue);
                 }
-                else if (isVnode(oc) && isVnode(nc)) {
-                    patch(oc, nc);
+            }
+            for (let index = 0; index < oldKeys.length; index++) {
+                const key = oldKeys[index];
+                if (!newKeySet.has(key)) {
+                    removeAttribute(el, key);
                 }
-                else if (!checkVnode(oc) && !checkVnode(nc) && oc !== nc) {
-                    updateTextNode(nc, el);
+            }
+            // $memo
+            if (oNode.props && oNode.props.hasOwnProperty(flag[3])) {
+                if (!oNode.props.$memo[0] && oNode.props.$memo[1] === memoFlag) {
+                    memoCreateEl(oNode, nNode);
+                    return;
                 }
+            }
+            // children
+            const oc = oNode.children;
+            const nc = nNode.children;
+            if (getType(oc) === 'array' && getType(nc) === 'array') {
+                patchKeyChildren(oc, nc, el, memoFlag);
+            }
+            else if (isVnode(oc) && isVnode(nc)) {
+                patch(oc, nc, memoFlag);
+            }
+            else if (!checkVnode(oc) && !checkVnode(nc) && oc !== nc) {
+                updateTextNode(nc, el);
             }
         }
     }
     // can be all-keyed or mixed
-    function patchKeyChildren(n1, n2, parentElm) {
+    function patchKeyChildren(n1, n2, parentElm, memoFlag) {
         const l2 = n2.length;
         let i = 0;
         let e1 = n1.length - 1;
         let e2 = l2 - 1;
         while (i <= e1 && i <= e2) {
             if (checkSameVnode(n1[i], n2[i])) {
-                patch(n1[i], n2[i]);
+                patch(n1[i], n2[i], memoFlag);
             }
             else {
                 break;
@@ -578,7 +597,7 @@
         }
         while (i <= e1 && i <= e2) {
             if (checkSameVnode(n1[e1], n2[e2])) {
-                patch(n1[e1], n2[e2]);
+                patch(n1[e1], n2[e2], memoFlag);
             }
             else {
                 break;
@@ -648,7 +667,7 @@
                     else {
                         moved = true;
                     }
-                    patch(n1[i], n2[newIndex]);
+                    patch(n1[i], n2[newIndex], memoFlag);
                     patched++;
                 }
             }
@@ -672,18 +691,18 @@
         }
     }
     // Change data
-    async function setData(callback, content) {
+    async function setData(callback, content, memoFlag) {
         if (typeof callback === 'function' && typeof Promise !== 'undefined') {
             try {
                 await Promise.resolve(callback());
                 const target = content ? content : this;
                 const newTree = target.template();
                 const oldTree = componentMap.get(target);
-                patch(oldTree, newTree);
+                patch(oldTree, newTree, memoFlag);
                 componentMap.set(target, newTree);
             }
             catch (err) {
-                warn(err);
+                warn(err.message);
             }
         }
     }
@@ -695,7 +714,7 @@
         if (fn === null)
             return;
         if (typeof fn !== 'function') {
-            console.warn('The parameter of onMounted is not a function!');
+            warn('The parameter of onMounted is not a function!');
             return;
         }
         mountHook.push(fn);
@@ -716,7 +735,7 @@
         if (fn === null)
             return;
         if (typeof fn !== 'function') {
-            console.warn('The parameter of onUnmounted is not a function!');
+            warn('The parameter of onUnmounted is not a function!');
             return;
         }
         unMountedHookCount += 1;

@@ -1,6 +1,6 @@
 {
   "name": "mettle",
-  "version": "0.3.1",
+  "version": "0.5.0",
   "description": "A approachable, fast, flexible and lightweight JavaScript library for building user interfaces.",
   "main": "dist/mettle.full.js",
   "module": "dist/mettle.runtime-esm.js",
