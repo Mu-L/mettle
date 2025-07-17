@@ -1,32 +1,249 @@
-import {
-  getType,
-  isUndef,
-  checkSameVnode,
-  isVnode,
-  checkVnode,
-  setStyleProp,
-  setAttribute,
-  removeAttribute,
-  createNode,
-  warn,
-  getSequence,
-  vnodeType,
-  notTagComponent,
-  addEventListener,
-  removeEventListener,
-} from './utils';
+// https://developer.mozilla.org/en-US/docs/Web/HTML/Element
+const HTML_TAGS: string =
+  'html,body,base,head,link,meta,style,title,address,article,aside,footer,' +
+  'header,h1,h2,h3,h4,h5,h6,nav,section,div,dd,dl,dt,figcaption,' +
+  'figure,picture,hr,img,li,main,ol,p,pre,ul,a,b,abbr,bdi,bdo,br,cite,code,' +
+  'data,dfn,em,i,kbd,mark,q,rp,rt,ruby,s,samp,small,span,strong,sub,sup,' +
+  'time,u,var,wbr,area,audio,map,track,video,embed,object,param,source,' +
+  'canvas,script,noscript,del,ins,caption,col,colgroup,table,thead,tbody,td,' +
+  'th,tr,button,datalist,fieldset,form,input,label,legend,meter,optgroup,' +
+  'option,output,progress,select,textarea,details,dialog,menu,' +
+  'summary,template,blockquote,iframe,tfoot';
+
+// https://developer.mozilla.org/en-US/docs/Web/SVG/Element
+const SVG_TAGS: string =
+  'svg,animate,circle,clippath,cursor,image,defs,desc,ellipse,filter,font-face' +
+  'foreignobject,g,glyph,line,marker,mask,missing-glyph,path,pattern,' +
+  'polygon,polyline,rect,switch,symbol,text,textpath,tspan,use,view,' +
+  'feBlend,feColorMatrix,feComponentTransfer,feComposite,feConvolveMatrix,feDiffuseLighting,feDisplacementMap,feFlood,feGaussianBlur,' +
+  'feImage,feMerge,feMorphology,feOffset,feSpecularLighting,feTile,feTurbulence,feDistantLight,fePointLight,feSpotLight,' +
+  'linearGradient,stop,radialGradient,' +
+  'animateTransform,animateMotion';
+
+function makeMap(str: string): (val: string) => boolean {
+  const map: { [key: string]: boolean } = Object.create(null);
+  const list = str.split(',');
+  for (let i = 0; i < list.length; i++) {
+    map[list[i]] = true;
+  }
+  return function (val: string) {
+    return map[val];
+  };
+}
+
+const isHTMLTag = /*#__PURE__*/ makeMap(HTML_TAGS);
+
+const isSVG = /*#__PURE__*/ makeMap(SVG_TAGS);
+
+function isXlink(name: string): boolean {
+  return name.charAt(5) === ':' && name.slice(0, 5) === 'xlink';
+}
+
+interface namespaceMapType {
+  [key: string]: string;
+}
+
+const namespaceMap: namespaceMapType = {
+  svg: 'http://www.w3.org/2000/svg',
+  math: 'http://www.w3.org/1998/Math/MathML',
+};
+
+const xlinkNS = 'http://www.w3.org/1999/xlink';
+
+function getXlinkProp(name: string): string {
+  return isXlink(name) ? name.slice(6, name.length) : '';
+}
+
+function getTagNamespace(tag: string): string | undefined {
+  if (isSVG(tag)) {
+    return 'svg';
+  }
+  if (tag === 'math') {
+    return 'math';
+  }
+  return undefined;
+}
+
+function createElementNS(namespace: string, tagName: string): Element {
+  return document.createElementNS(namespaceMap[namespace], tagName);
+}
+
+function getType(v: any): string {
+  return Object.prototype.toString
+    .call(v)
+    .match(/\[object (.+?)\]/)[1]
+    .toLowerCase();
+}
+
+function isUndef(v: any): boolean {
+  return v === undefined || v === null;
+}
+
+export interface vnodeType {
+  tag: any;
+  props: any;
+  children: any;
+  el: any;
+  key: any;
+}
+
+function checkSameVnode(o: vnodeType, n: vnodeType): boolean {
+  return o.tag === n.tag && o.key === n.key;
+}
+
+function notTagComponent(oNode: vnodeType, nNode: vnodeType): boolean {
+  return getType(nNode.tag) !== 'function' && getType(oNode.tag) !== 'function';
+}
+
+function hasOwnProperty(obj: vnodeType, prop: string) {
+  return obj.hasOwnProperty(prop);
+}
+
+function isVnode(vnode: vnodeType) {
+  if (vnode && getType(vnode) === 'object') {
+    return (
+      hasOwnProperty(vnode, 'tag') &&
+      hasOwnProperty(vnode, 'props') &&
+      hasOwnProperty(vnode, 'children') &&
+      hasOwnProperty(vnode, 'key')
+    );
+  } else {
+    return false;
+  }
+}
+
+function isArrayVnode(vnodes: Array<vnodeType>): boolean {
+  return vnodes.every(isVnode);
+}
+function checkVnode(vnodes: Array<vnodeType> | vnodeType): boolean {
+  return Array.isArray(vnodes) ? isArrayVnode(vnodes) : isVnode(vnodes);
+}
+
+function warn(msg: string) {
+  console.warn(`[Mettle.js warn]: ${msg}`);
+}
+
+function setStyleProp(el: HTMLElement, prototype: { [key: string]: string }) {
+  Object.assign(el.style, prototype);
+}
+
+function addEventListener(
+  el: HTMLElement,
+  name: string,
+  listener: EventListenerOrEventListenerObject
+) {
+  const eventName = name.slice(2).toLowerCase();
+  if (typeof listener === 'function') {
+    el.addEventListener(eventName, listener);
+  }
+}
+
+function removeEventListener(
+  el: HTMLElement,
+  name: string,
+  listener: EventListenerOrEventListenerObject
+) {
+  const eventName = name.slice(2).toLowerCase();
+  if (typeof listener === 'function') {
+    el.removeEventListener(eventName, listener);
+  }
+}
+
+function setAttribute(el: HTMLElement, key: string, value: string | boolean): void {
+  if (typeof isXlink === 'function' && !isXlink(key)) {
+    if (typeof value !== 'boolean') {
+      el.setAttribute(key, value.toString());
+    } else {
+      value ? el.setAttribute(key, '') : el.removeAttribute(key);
+    }
+  } else {
+    const xlinkNS = 'http://www.w3.org/1999/xlink';
+    el.setAttributeNS(xlinkNS, key, value.toString());
+  }
+}
+
+function removeAttribute(el: HTMLElement, key: string) {
+  if (!isXlink(key)) {
+    el.removeAttribute(key);
+  } else {
+    el.removeAttributeNS(xlinkNS, getXlinkProp(key));
+  }
+}
+
+function createNode(tag: string): Element | DocumentFragment | Comment | null {
+  switch (true) {
+    // Html
+    case isHTMLTag(tag):
+      return document.createElement(tag);
+    // Svg
+    case isSVG(tag):
+      return createElementNS(getTagNamespace(tag), tag);
+    // Fragment
+    case tag === 'fragment':
+      return document.createDocumentFragment();
+    // Comment
+    case tag === 'comment' || tag === 'null':
+      return document.createComment(tag);
+    // Default
+    default:
+      return document.createElement(tag);
+  }
+}
+
+// https://en.wikipedia.org/wiki/Longest_increasing_subsequence
+function getSequence(arr: number[]): number[] {
+  const p = arr.slice();
+  const result = [0];
+  let i, j, u, v, c;
+  const len = arr.length;
+  for (i = 0; i < len; i++) {
+    const arrI = arr[i];
+    if (arrI !== 0) {
+      j = result[result.length - 1];
+      if (arr[j] < arrI) {
+        p[i] = j;
+        result.push(i);
+        continue;
+      }
+      u = 0;
+      v = result.length - 1;
+      while (u < v) {
+        c = ((u + v) / 2) | 0;
+        if (arr[result[c]] < arrI) {
+          u = c + 1;
+        } else {
+          v = c;
+        }
+      }
+      if (arrI < arr[result[u]]) {
+        if (u > 0) {
+          p[i] = result[u - 1];
+        }
+        result[u] = i;
+      }
+    }
+  }
+  u = result.length;
+  v = result[u - 1];
+
+  while (u-- > 0) {
+    result[u] = v;
+    v = p[v];
+  }
+  return result;
+}
 
 // version
 const version: string = '__VERSION__';
 
 // Flag
-const flag: Array<string> = ['$ref', '$is', '$once', '$memo'];
+const flag: Array<string> = ['$ref', '$once', '$memo'];
+
+// Component
+let componentMap = new WeakMap();
 
 // DomInfo
 const domInfo = new WeakMap();
-
-// Component
-let componentMap: WeakMap<object, any> = new WeakMap();
 
 // Update text node
 function updateTextNode(val: any, el: Element) {
@@ -61,45 +278,39 @@ function mount(
   const { tag, props, children } = vnode;
   // tag
   if (!isUndef(tag)) {
-    const el: any = createNode(tag);
-    vnode.el = el;
-    // props
-    if (!isUndef(props)) {
-      const keys = Object.keys(props);
+    const tagType = getType(tag);
+    if (tagType === 'string') {
+      const el: any = createNode(tag as string);
+      vnode.el = el;
+      // props
+      if (!isUndef(props)) {
+        const keys = Object.keys(props);
 
-      for (let index = 0; index < keys.length; index++) {
-        const key = keys[index];
-        const propValue = props[key];
-        const propValueType = getType(propValue);
+        for (let index = 0; index < keys.length; index++) {
+          const key = keys[index];
+          const propValue = props[key];
+          const propValueType = getType(propValue);
 
-        if (key.startsWith('on')) {
-          addEventListener(el, key, propValue);
-        }
+          if (key.startsWith('on')) {
+            addEventListener(el, key, propValue);
+          }
 
-        if (propValueType !== 'function' && key !== 'key' && !flag.includes(key)) {
-          setAttribute(el, key, propValue);
-        }
+          if (propValueType !== 'function' && key !== 'key' && !flag.includes(key)) {
+            setAttribute(el, key, propValue);
+          }
 
-        if (key === 'style' && propValueType === 'object') {
-          setStyleProp(el, propValue);
-        }
+          if (key === 'style' && propValueType === 'object') {
+            setStyleProp(el, propValue);
+          }
 
-        // component
-        if (key === flag[1] && propValueType === 'object') {
-          const newTree = propValue.template();
-          mount(newTree, el);
-          componentMap.set(propValue, newTree);
-        }
-
-        // domInfo
-        if (key === flag[0] && propValueType === 'object') {
-          domInfo.set(propValue, el);
+          // domInfo
+          if (key === flag[0] && propValueType === 'object') {
+            domInfo.set(propValue, el);
+          }
         }
       }
-    }
 
-    // children
-    if (tag !== 'component') {
+      // children
       if (!isUndef(children)) {
         if (!checkVnode(children)) {
           if (el) {
@@ -119,14 +330,21 @@ function mount(
           }
         }
       }
-    }
 
-    if (anchor) {
-      container.insertBefore(el, anchor);
-    } else if (container) {
-      container.appendChild(el);
-    } else {
-      return el;
+      if (anchor) {
+        container.insertBefore(el, anchor);
+      } else if (container) {
+        container.appendChild(el);
+      } else {
+        return el;
+      }
+    } else if (tagType === 'function') {
+      const param = { content: tag, setData: setData.bind(tag), props };
+      const template = tag.call(tag, param);
+      tag.template = template;
+      const newTree = template();
+      mount(newTree, container);
+      componentMap.set(tag, newTree);
     }
   }
 }
@@ -134,7 +352,7 @@ function mount(
 // Diff
 function patch(oNode: vnodeType, nNode: vnodeType, memoFlag?: symbol) {
   // $once
-  if (oNode.props && oNode.props.hasOwnProperty(flag[2])) {
+  if (oNode.props && oNode.props.hasOwnProperty(flag[1])) {
     return;
   }
 
@@ -209,7 +427,7 @@ function patch(oNode: vnodeType, nNode: vnodeType, memoFlag?: symbol) {
     }
 
     // $memo
-    if (oNode.props && oNode.props.hasOwnProperty(flag[3])) {
+    if (oNode.props && oNode.props.hasOwnProperty(flag[2])) {
       if (!oNode.props.$memo[0] && oNode.props.$memo[1] === memoFlag) {
         memoCreateEl(oNode, nNode);
         return;
@@ -346,6 +564,11 @@ function patchKeyChildren(
   }
 }
 
+interface OptionsProps {
+  content: any;
+  setData: (data: () => void, content?: any, memoFlag?: symbol) => Promise<void>;
+}
+
 // Change data
 async function setData(callback: () => void, content?: any, memoFlag?: symbol) {
   if (typeof callback === 'function' && typeof Promise !== 'undefined') {
@@ -360,6 +583,53 @@ async function setData(callback: () => void, content?: any, memoFlag?: symbol) {
       warn(err.message);
     }
   }
+}
+
+// Normalize Container
+function normalizeContainer(container: Element | DocumentFragment | Comment | null | string) {
+  if (typeof container === 'string') {
+    const res = document.querySelector(container);
+    if (!res) {
+      let elem = null;
+      if (container.startsWith('#')) {
+        elem = document.createElement('div');
+        elem.setAttribute('id', container.substring(1, container.length));
+      } else if (container.startsWith('.')) {
+        elem = document.createElement('div');
+        elem.setAttribute('class', container.substring(1, container.length));
+      } else {
+        warn(`Failed to mount app: mount target selector "${container}" returned null.`);
+      }
+      document.body.insertAdjacentElement('afterbegin', elem);
+      return elem;
+    }
+    return res;
+  } else if (container instanceof HTMLElement) {
+    return container;
+  } else if (
+    window.ShadowRoot &&
+    container instanceof window.ShadowRoot &&
+    container.mode === 'closed'
+  ) {
+    warn('mounting on a ShadowRoot with `{mode: "closed"}` may lead to unpredictable bugs.');
+    return null;
+  } else {
+    return null;
+  }
+}
+
+// Create Mettle application
+function createApp(root: any, container: string) {
+  const rootContent = root.tag;
+  const param = { content: rootContent, setData: setData.bind(rootContent), props: root.props };
+  const template = rootContent.call(rootContent, param);
+  rootContent.template = template;
+  const newTree = template();
+  const mountNodeEl = normalizeContainer(container);
+  mount(newTree, mountNodeEl);
+  componentMap.set(rootContent, newTree);
+  _el = mountNodeEl;
+  bindMounted();
 }
 
 // onMounted
@@ -412,103 +682,18 @@ function bindUnmounted() {
 
 let _el: any = Object.create(null);
 // Reset view
-function resetView(content: any) {
+function resetView(view: any) {
   bindUnmounted();
-
   _el.innerHTML = '';
   componentMap = null;
   componentMap = new WeakMap();
-  const newTree = content.template();
+  const param = { content: view, setData: setData.bind(view) };
+  const template = view.call(view, param);
+  view.template = template;
+  const newTree = template();
   mount(newTree, _el);
-  componentMap.set(content, newTree);
-
+  componentMap.set(view, newTree);
   bindMounted();
 }
 
-// Normalize Container
-function normalizeContainer(container: Element | DocumentFragment | Comment | null | string) {
-  if (typeof container === 'string') {
-    const res = document.querySelector(container);
-    if (!res) {
-      let elem = null;
-      if (container.startsWith('#')) {
-        elem = document.createElement('div');
-        elem.setAttribute('id', container.substring(1, container.length));
-      } else if (container.startsWith('.')) {
-        elem = document.createElement('div');
-        elem.setAttribute('class', container.substring(1, container.length));
-      } else {
-        warn(`Failed to mount app: mount target selector "${container}" returned null.`);
-      }
-      document.body.insertAdjacentElement('afterbegin', elem);
-      return elem;
-    }
-    return res;
-  } else if (container instanceof HTMLElement) {
-    return container;
-  } else if (
-    window.ShadowRoot &&
-    container instanceof window.ShadowRoot &&
-    container.mode === 'closed'
-  ) {
-    warn('mounting on a ShadowRoot with `{mode: "closed"}` may lead to unpredictable bugs.');
-    return null;
-  } else {
-    return null;
-  }
-}
-
-interface OptionsProps {
-  content: any;
-  setData: (data: () => void, content?: any, memoFlag?: symbol) => Promise<void>;
-}
-
-// Define Component
-function defineComponent(options?: any, factory?: any) {
-  if (typeof options === 'function') {
-    factory = options;
-    options = Object.create(null);
-  }
-
-  class Component {
-    template: () => any;
-    static instance: Component;
-
-    constructor() {
-      const param: OptionsProps = { content: this, setData: setData.bind(this) };
-      const template = factory.call(this, param);
-      this.template = template;
-
-      const newTree = template();
-      if (options.mount) {
-        const mountNodeEl = normalizeContainer(options.mount);
-        mount(newTree, mountNodeEl);
-        componentMap.set(this, newTree);
-        _el = mountNodeEl;
-
-        bindMounted();
-      }
-    }
-
-    static getInstance() {
-      if (!this.instance) {
-        this.instance = new Component();
-      }
-
-      return this.instance;
-    }
-  }
-
-  return Component.getInstance();
-}
-
-export {
-  version,
-  resetView,
-  setData,
-  defineComponent,
-  domInfo,
-  onMounted,
-  onUnmounted,
-  OptionsProps,
-};
+export { version, createApp, setData, domInfo, onMounted, onUnmounted, resetView, OptionsProps };

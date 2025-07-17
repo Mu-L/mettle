@@ -1,2 +1,2 @@
 export { html } from './compile';
-export { version, resetView, setData, defineComponent, domInfo, onMounted, onUnmounted, OptionsProps, } from './core';
+export { version, createApp, setData, domInfo, onMounted, onUnmounted, resetView, OptionsProps, } from './core';

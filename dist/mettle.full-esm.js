@@ -1,5 +1,5 @@
 /*!
- * Mettle.js v0.5.0
+ * Mettle.js v0.9.0
  * (c) 2021-2025 maomincoding
  * Released under the MIT License.
  */
@@ -264,18 +264,20 @@ function checkSameVnode(o, n) {
     return o.tag === n.tag && o.key === n.key;
 }
 function notTagComponent(oNode, nNode) {
-    return nNode.tag !== 'component' && oNode.tag !== 'component';
+    return getType(nNode.tag) !== 'function' && getType(oNode.tag) !== 'function';
 }
 function hasOwnProperty(obj, prop) {
     return obj.hasOwnProperty(prop);
 }
 function isVnode(vnode) {
-    if (vnode) {
+    if (vnode && getType(vnode) === 'object') {
         return (hasOwnProperty(vnode, 'tag') &&
             hasOwnProperty(vnode, 'props') &&
             hasOwnProperty(vnode, 'children') &&
-            hasOwnProperty(vnode, 'key') &&
-            hasOwnProperty(vnode, 'el'));
+            hasOwnProperty(vnode, 'key'));
+    }
+    else {
+        return false;
     }
 }
 function isArrayVnode(vnodes) {
@@ -333,7 +335,7 @@ function createNode(tag) {
         case isSVG(tag):
             return createElementNS(getTagNamespace(tag), tag);
         // Fragment
-        case tag === 'fragment' || tag === 'component':
+        case tag === 'fragment':
             return document.createDocumentFragment();
         // Comment
         case tag === 'comment' || tag === 'null':
@@ -385,15 +387,14 @@ function getSequence(arr) {
     }
     return result;
 }
-
 // version
-const version = '0.5.0';
+const version = '0.9.0';
 // Flag
-const flag = ['$ref', '$is', '$once', '$memo'];
-// DomInfo
-const domInfo = new WeakMap();
+const flag = ['$ref', '$once', '$memo'];
 // Component
 let componentMap = new WeakMap();
+// DomInfo
+const domInfo = new WeakMap();
 // Update text node
 function updateTextNode(val, el) {
     el.textContent = val;
@@ -422,38 +423,33 @@ function mount(vnode, container, anchor) {
     const { tag, props, children } = vnode;
     // tag
     if (!isUndef(tag)) {
-        const el = createNode(tag);
-        vnode.el = el;
-        // props
-        if (!isUndef(props)) {
-            const keys = Object.keys(props);
-            for (let index = 0; index < keys.length; index++) {
-                const key = keys[index];
-                const propValue = props[key];
-                const propValueType = getType(propValue);
-                if (key.startsWith('on')) {
-                    addEventListener(el, key, propValue);
-                }
-                if (propValueType !== 'function' && key !== 'key' && !flag.includes(key)) {
-                    setAttribute(el, key, propValue);
-                }
-                if (key === 'style' && propValueType === 'object') {
-                    setStyleProp(el, propValue);
-                }
-                // component
-                if (key === flag[1] && propValueType === 'object') {
-                    const newTree = propValue.template();
-                    mount(newTree, el);
-                    componentMap.set(propValue, newTree);
-                }
-                // domInfo
-                if (key === flag[0] && propValueType === 'object') {
-                    domInfo.set(propValue, el);
+        const tagType = getType(tag);
+        if (tagType === 'string') {
+            const el = createNode(tag);
+            vnode.el = el;
+            // props
+            if (!isUndef(props)) {
+                const keys = Object.keys(props);
+                for (let index = 0; index < keys.length; index++) {
+                    const key = keys[index];
+                    const propValue = props[key];
+                    const propValueType = getType(propValue);
+                    if (key.startsWith('on')) {
+                        addEventListener(el, key, propValue);
+                    }
+                    if (propValueType !== 'function' && key !== 'key' && !flag.includes(key)) {
+                        setAttribute(el, key, propValue);
+                    }
+                    if (key === 'style' && propValueType === 'object') {
+                        setStyleProp(el, propValue);
+                    }
+                    // domInfo
+                    if (key === flag[0] && propValueType === 'object') {
+                        domInfo.set(propValue, el);
+                    }
                 }
             }
-        }
-        // children
-        if (tag !== 'component') {
+            // children
             if (!isUndef(children)) {
                 if (!checkVnode(children)) {
                     if (el) {
@@ -475,22 +471,30 @@ function mount(vnode, container, anchor) {
                     }
                 }
             }
+            if (anchor) {
+                container.insertBefore(el, anchor);
+            }
+            else if (container) {
+                container.appendChild(el);
+            }
+            else {
+                return el;
+            }
         }
-        if (anchor) {
-            container.insertBefore(el, anchor);
-        }
-        else if (container) {
-            container.appendChild(el);
-        }
-        else {
-            return el;
+        else if (tagType === 'function') {
+            const param = { content: tag, setData: setData.bind(tag), props };
+            const template = tag.call(tag, param);
+            tag.template = template;
+            const newTree = template();
+            mount(newTree, container);
+            componentMap.set(tag, newTree);
         }
     }
 }
 // Diff
 function patch(oNode, nNode, memoFlag) {
     // $once
-    if (oNode.props && oNode.props.hasOwnProperty(flag[2])) {
+    if (oNode.props && oNode.props.hasOwnProperty(flag[1])) {
         return;
     }
     if (!notTagComponent(oNode, nNode)) {
@@ -554,7 +558,7 @@ function patch(oNode, nNode, memoFlag) {
             }
         }
         // $memo
-        if (oNode.props && oNode.props.hasOwnProperty(flag[3])) {
+        if (oNode.props && oNode.props.hasOwnProperty(flag[2])) {
             if (!oNode.props.$memo[0] && oNode.props.$memo[1] === memoFlag) {
                 memoCreateEl(oNode, nNode);
                 return;
@@ -700,6 +704,54 @@ async function setData(callback, content, memoFlag) {
         }
     }
 }
+// Normalize Container
+function normalizeContainer(container) {
+    if (typeof container === 'string') {
+        const res = document.querySelector(container);
+        if (!res) {
+            let elem = null;
+            if (container.startsWith('#')) {
+                elem = document.createElement('div');
+                elem.setAttribute('id', container.substring(1, container.length));
+            }
+            else if (container.startsWith('.')) {
+                elem = document.createElement('div');
+                elem.setAttribute('class', container.substring(1, container.length));
+            }
+            else {
+                warn(`Failed to mount app: mount target selector "${container}" returned null.`);
+            }
+            document.body.insertAdjacentElement('afterbegin', elem);
+            return elem;
+        }
+        return res;
+    }
+    else if (container instanceof HTMLElement) {
+        return container;
+    }
+    else if (window.ShadowRoot &&
+        container instanceof window.ShadowRoot &&
+        container.mode === 'closed') {
+        warn('mounting on a ShadowRoot with `{mode: "closed"}` may lead to unpredictable bugs.');
+        return null;
+    }
+    else {
+        return null;
+    }
+}
+// Create Mettle application
+function createApp(root, container) {
+    const rootContent = root.tag;
+    const param = { content: rootContent, setData: setData.bind(rootContent), props: root.props };
+    const template = rootContent.call(rootContent, param);
+    rootContent.template = template;
+    const newTree = template();
+    const mountNodeEl = normalizeContainer(container);
+    mount(newTree, mountNodeEl);
+    componentMap.set(rootContent, newTree);
+    _el = mountNodeEl;
+    bindMounted();
+}
 // onMounted
 let mountHook = [];
 let unMountedHookCount = 0;
@@ -746,81 +798,18 @@ function bindUnmounted() {
 }
 let _el = Object.create(null);
 // Reset view
-function resetView(content) {
+function resetView(view) {
     bindUnmounted();
     _el.innerHTML = '';
     componentMap = null;
     componentMap = new WeakMap();
-    const newTree = content.template();
+    const param = { content: view, setData: setData.bind(view) };
+    const template = view.call(view, param);
+    view.template = template;
+    const newTree = template();
     mount(newTree, _el);
-    componentMap.set(content, newTree);
+    componentMap.set(view, newTree);
     bindMounted();
 }
-// Normalize Container
-function normalizeContainer(container) {
-    if (typeof container === 'string') {
-        const res = document.querySelector(container);
-        if (!res) {
-            let elem = null;
-            if (container.startsWith('#')) {
-                elem = document.createElement('div');
-                elem.setAttribute('id', container.substring(1, container.length));
-            }
-            else if (container.startsWith('.')) {
-                elem = document.createElement('div');
-                elem.setAttribute('class', container.substring(1, container.length));
-            }
-            else {
-                warn(`Failed to mount app: mount target selector "${container}" returned null.`);
-            }
-            document.body.insertAdjacentElement('afterbegin', elem);
-            return elem;
-        }
-        return res;
-    }
-    else if (container instanceof HTMLElement) {
-        return container;
-    }
-    else if (window.ShadowRoot &&
-        container instanceof window.ShadowRoot &&
-        container.mode === 'closed') {
-        warn('mounting on a ShadowRoot with `{mode: "closed"}` may lead to unpredictable bugs.');
-        return null;
-    }
-    else {
-        return null;
-    }
-}
-// Define Component
-function defineComponent(options, factory) {
-    if (typeof options === 'function') {
-        factory = options;
-        options = Object.create(null);
-    }
-    class Component {
-        template;
-        static instance;
-        constructor() {
-            const param = { content: this, setData: setData.bind(this) };
-            const template = factory.call(this, param);
-            this.template = template;
-            const newTree = template();
-            if (options.mount) {
-                const mountNodeEl = normalizeContainer(options.mount);
-                mount(newTree, mountNodeEl);
-                componentMap.set(this, newTree);
-                _el = mountNodeEl;
-                bindMounted();
-            }
-        }
-        static getInstance() {
-            if (!this.instance) {
-                this.instance = new Component();
-            }
-            return this.instance;
-        }
-    }
-    return Component.getInstance();
-}
 
-export { defineComponent, domInfo, html, onMounted, onUnmounted, resetView, setData, version };
+export { createApp, domInfo, html, onMounted, onUnmounted, resetView, setData, version };

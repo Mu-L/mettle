@@ -1,10 +1,10 @@
 export { html } from '../lib/compile.js';
 export {
   version,
-  resetView,
+  createApp,
   setData,
-  defineComponent,
   domInfo,
   onMounted,
   onUnmounted,
+  resetView,
 } from '../lib/core.js';

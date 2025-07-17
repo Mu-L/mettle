@@ -1,11 +1,11 @@
 export { html } from './compile';
 export {
   version,
-  resetView,
+  createApp,
   setData,
-  defineComponent,
   domInfo,
   onMounted,
   onUnmounted,
+  resetView,
   OptionsProps,
 } from './core';

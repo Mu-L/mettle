@@ -2392,8 +2392,8 @@ export namespace JSX {
     view: ViewSVGAttributes<SVGViewElement>;
   }
   interface IntrinsicElements extends HTMLElementTags, HTMLElementDeprecatedTags, SVGElementTags {
-    component: any;
     null;
     fragment;
+    comment;
   }
 }
