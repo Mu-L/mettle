@@ -1,1 +1,1 @@
-export * from './jsx';
+export * from 'mettle-jsx-runtime';
