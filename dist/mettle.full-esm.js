@@ -1,5 +1,5 @@
 /*!
- * Mettle.js v0.9.0
+ * Mettle.js v1.0.1
  * (c) 2021-2025 maomincoding
  * Released under the MIT License.
  */
@@ -388,7 +388,7 @@ function getSequence(arr) {
     return result;
 }
 // version
-const version = '0.9.0';
+const version = '1.0.1';
 // Flag
 const flag = ['$ref', '$once', '$memo'];
 // Component

@@ -6,6 +6,5 @@ export {
   domInfo,
   onMounted,
   onUnmounted,
-  resetView,
-  OptionsProps,
+  resetView
 } from './core';

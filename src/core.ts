@@ -564,11 +564,6 @@ function patchKeyChildren(
   }
 }
 
-interface OptionsProps {
-  content: any;
-  setData: (data: () => void, content?: any, memoFlag?: symbol) => Promise<void>;
-}
-
 // Change data
 async function setData(callback: () => void, content?: any, memoFlag?: symbol) {
   if (typeof callback === 'function' && typeof Promise !== 'undefined') {
@@ -696,4 +691,4 @@ function resetView(view: any) {
   bindMounted();
 }
 
-export { version, createApp, setData, domInfo, onMounted, onUnmounted, resetView, OptionsProps };
+export { version, createApp, setData, domInfo, onMounted, onUnmounted, resetView };

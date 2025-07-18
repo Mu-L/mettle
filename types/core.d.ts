@@ -7,13 +7,9 @@ export interface vnodeType {
 }
 declare const version: string;
 declare const domInfo: WeakMap<object, any>;
-interface OptionsProps {
-    content: any;
-    setData: (data: () => void, content?: any, memoFlag?: symbol) => Promise<void>;
-}
 declare function setData(callback: () => void, content?: any, memoFlag?: symbol): Promise<void>;
 declare function createApp(root: any, container: string): void;
 declare function onMounted(fn?: any): void;
 declare function onUnmounted(fn?: any): void;
 declare function resetView(view: any): void;
-export { version, createApp, setData, domInfo, onMounted, onUnmounted, resetView, OptionsProps };
+export { version, createApp, setData, domInfo, onMounted, onUnmounted, resetView };
