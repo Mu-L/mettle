@@ -1,20 +1,10 @@
 /*!
- * Mettle.js v1.0.1
+ * Mettle.js v1.1.0
  * (c) 2021-2025 maomincoding
  * Released under the MIT License.
  */
-// https://developer.mozilla.org/en-US/docs/Web/HTML/Element
-const HTML_TAGS = 'html,body,base,head,link,meta,style,title,address,article,aside,footer,' +
-    'header,h1,h2,h3,h4,h5,h6,nav,section,div,dd,dl,dt,figcaption,' +
-    'figure,picture,hr,img,li,main,ol,p,pre,ul,a,b,abbr,bdi,bdo,br,cite,code,' +
-    'data,dfn,em,i,kbd,mark,q,rp,rt,ruby,s,samp,small,span,strong,sub,sup,' +
-    'time,u,var,wbr,area,audio,map,track,video,embed,object,param,source,' +
-    'canvas,script,noscript,del,ins,caption,col,colgroup,table,thead,tbody,td,' +
-    'th,tr,button,datalist,fieldset,form,input,label,legend,meter,optgroup,' +
-    'option,output,progress,select,textarea,details,dialog,menu,' +
-    'summary,template,blockquote,iframe,tfoot';
 // https://developer.mozilla.org/en-US/docs/Web/SVG/Element
-const SVG_TAGS = 'svg,animate,circle,clippath,cursor,image,defs,desc,ellipse,filter,font-face' +
+const SVG_TAGS = 'svg,animate,circle,clippath,cursor,image,defs,desc,ellipse,filter,font-face,' +
     'foreignobject,g,glyph,line,marker,mask,missing-glyph,path,pattern,' +
     'polygon,polyline,rect,switch,symbol,text,textpath,tspan,use,view,' +
     'feBlend,feColorMatrix,feComponentTransfer,feComposite,feConvolveMatrix,feDiffuseLighting,feDisplacementMap,feFlood,feGaussianBlur,' +
@@ -31,19 +21,11 @@ function makeMap(str) {
         return map[val];
     };
 }
-const isHTMLTag = /*#__PURE__*/ makeMap(HTML_TAGS);
 const isSVG = /*#__PURE__*/ makeMap(SVG_TAGS);
-function isXlink(name) {
-    return name.charAt(5) === ':' && name.slice(0, 5) === 'xlink';
-}
 const namespaceMap = {
     svg: 'http://www.w3.org/2000/svg',
     math: 'http://www.w3.org/1998/Math/MathML',
 };
-const xlinkNS = 'http://www.w3.org/1999/xlink';
-function getXlinkProp(name) {
-    return isXlink(name) ? name.slice(6, name.length) : '';
-}
 function getTagNamespace(tag) {
     if (isSVG(tag)) {
         return 'svg';
@@ -56,41 +38,14 @@ function getTagNamespace(tag) {
 function createElementNS(namespace, tagName) {
     return document.createElementNS(namespaceMap[namespace], tagName);
 }
-function getType(v) {
-    return Object.prototype.toString
-        .call(v)
-        .match(/\[object (.+?)\]/)[1]
-        .toLowerCase();
-}
-function isUndef(v) {
-    return v === undefined || v === null;
-}
-function checkSameVnode(o, n) {
-    return o.tag === n.tag && o.key === n.key;
-}
-function notTagComponent(oNode, nNode) {
-    return getType(nNode.tag) !== 'function' && getType(oNode.tag) !== 'function';
-}
-function hasOwnProperty(obj, prop) {
-    return obj.hasOwnProperty(prop);
-}
-function isVnode(vnode) {
-    if (vnode && getType(vnode) === 'object') {
-        return (hasOwnProperty(vnode, 'tag') &&
-            hasOwnProperty(vnode, 'props') &&
-            hasOwnProperty(vnode, 'children') &&
-            hasOwnProperty(vnode, 'key'));
-    }
-    else {
-        return false;
-    }
-}
-function isArrayVnode(vnodes) {
-    return vnodes.every(isVnode);
-}
-function checkVnode(vnodes) {
-    return Array.isArray(vnodes) ? isArrayVnode(vnodes) : isVnode(vnodes);
-}
+const hasOwnProperty$1 = Object.prototype.hasOwnProperty;
+const hasOwn = (val, key) => hasOwnProperty$1.call(val, key);
+const isObject = (val) => val !== null && typeof val === 'object';
+const isUndef = (v) => v === undefined || v === null;
+const checkSameVnode = (o, n) => o.tag === n.tag && o.key === n.key;
+const notTagComponent = (oNode, nNode) => typeof oNode.tag !== 'function' && typeof nNode.tag !== 'function';
+const isVnode = (vnode) => vnode != null && (typeof vnode === 'object' ? 'tag' in vnode : false);
+const isTextChildren = (children) => !isVnode(children) && !Array.isArray(children);
 function warn(msg) {
     console.warn(`[Mettle.js warn]: ${msg}`);
 }
@@ -98,57 +53,55 @@ function setStyleProp(el, prototype) {
     Object.assign(el.style, prototype);
 }
 function addEventListener(el, name, listener) {
+    if (typeof listener !== 'function')
+        return;
     const eventName = name.slice(2).toLowerCase();
-    if (typeof listener === 'function') {
-        el.addEventListener(eventName, listener);
-    }
+    el.addEventListener(eventName, listener);
 }
 function removeEventListener(el, name, listener) {
+    if (typeof listener !== 'function')
+        return;
     const eventName = name.slice(2).toLowerCase();
-    if (typeof listener === 'function') {
-        el.removeEventListener(eventName, listener);
-    }
+    el.removeEventListener(eventName, listener);
 }
+const XLINK_NS = 'http://www.w3.org/1999/xlink';
+const BOOLEAN_ATTRS = new Set([
+    'checked',
+    'disabled',
+    'readonly',
+    'selected',
+    'multiple',
+    'hidden',
+]);
 function setAttribute(el, key, value) {
-    if (typeof isXlink === 'function' && !isXlink(key)) {
-        if (typeof value !== 'boolean') {
-            el.setAttribute(key, value.toString());
-        }
-        else {
-            value ? el.setAttribute(key, '') : el.removeAttribute(key);
-        }
+    if (BOOLEAN_ATTRS.has(key)) {
+        value ? el.setAttribute(key, '') : el.removeAttribute(key);
+        return;
     }
-    else {
-        const xlinkNS = 'http://www.w3.org/1999/xlink';
-        el.setAttributeNS(xlinkNS, key, value.toString());
+    if (key.startsWith('xlink:')) {
+        el.setAttributeNS(XLINK_NS, key, value);
+        return;
     }
+    el.setAttribute(key, value);
 }
 function removeAttribute(el, key) {
-    if (!isXlink(key)) {
-        el.removeAttribute(key);
+    if (key.startsWith('xlink:')) {
+        el.removeAttributeNS(XLINK_NS, key);
+        return;
     }
-    else {
-        el.removeAttributeNS(xlinkNS, getXlinkProp(key));
-    }
+    el.removeAttribute(key);
 }
+const CREATE_ELEMENT = document.createElement.bind(document);
+const CREATE_FRAGMENT = document.createDocumentFragment.bind(document);
+const CREATE_COMMENT = document.createComment.bind(document);
 function createNode(tag) {
-    switch (true) {
-        // Html
-        case isHTMLTag(tag):
-            return document.createElement(tag);
-        // Svg
-        case isSVG(tag):
-            return createElementNS(getTagNamespace(tag), tag);
-        // Fragment
-        case tag === 'fragment':
-            return document.createDocumentFragment();
-        // Comment
-        case tag === 'comment' || tag === 'null':
-            return document.createComment(tag);
-        // Default
-        default:
-            return document.createElement(tag);
-    }
+    if (tag === 'fragment')
+        return CREATE_FRAGMENT();
+    if (tag === 'comment' || tag === 'null')
+        return CREATE_COMMENT('');
+    if (isSVG(tag))
+        return createElementNS(getTagNamespace(tag), tag);
+    return CREATE_ELEMENT(tag);
 }
 // https://en.wikipedia.org/wiki/Longest_increasing_subsequence
 function getSequence(arr) {
@@ -192,24 +145,12 @@ function getSequence(arr) {
     }
     return result;
 }
-// version
-const version = '1.0.1';
-// Flag
-const flag = ['$ref', '$once', '$memo'];
-// Component
-let componentMap = new WeakMap();
-// DomInfo
-const domInfo = new WeakMap();
-// Update text node
-function updateTextNode(val, el) {
-    el.textContent = val;
-}
 // Create el for the child elements of the element marked with $memo
 function memoCreateEl(oNode, nNode) {
     const oldChildren = oNode.children;
     const newChildren = nNode.children;
-    const childrenType = getType(newChildren);
-    if (childrenType === 'array') {
+    const childrenArrType = Array.isArray(newChildren);
+    if (childrenArrType) {
         for (let index = 0; index < newChildren.length; index++) {
             const newChild = newChildren[index];
             const oldChild = oldChildren[index];
@@ -219,87 +160,99 @@ function memoCreateEl(oNode, nNode) {
             }
         }
     }
-    else if (childrenType === 'object') {
+    else if (isObject(newChildren)) {
         newChildren.el = oldChildren.el;
     }
+}
+// version
+const version = '1.1.0';
+// Flag
+const isFlag = /* @__PURE__ */ makeMap('$ref,$once,$memo');
+// Component
+let componentMap = new WeakMap();
+// DomInfo
+const domInfo = new WeakMap();
+// Update text node
+function updateTextNode(val, el) {
+    el.textContent = val;
 }
 // Convert virtual dom to real dom
 function mount(vnode, container, anchor) {
     const { tag, props, children } = vnode;
+    if (isUndef(tag))
+        return;
     // tag
-    if (!isUndef(tag)) {
-        const tagType = getType(tag);
-        if (tagType === 'string') {
-            const el = createNode(tag);
-            vnode.el = el;
-            // props
-            if (!isUndef(props)) {
-                const keys = Object.keys(props);
-                for (let index = 0; index < keys.length; index++) {
-                    const key = keys[index];
-                    const propValue = props[key];
-                    const propValueType = getType(propValue);
-                    if (key.startsWith('on')) {
-                        addEventListener(el, key, propValue);
-                    }
-                    if (propValueType !== 'function' && key !== 'key' && !flag.includes(key)) {
-                        setAttribute(el, key, propValue);
-                    }
-                    if (key === 'style' && propValueType === 'object') {
-                        setStyleProp(el, propValue);
-                    }
-                    // domInfo
-                    if (key === flag[0] && propValueType === 'object') {
-                        domInfo.set(propValue, el);
-                    }
+    if (typeof tag === 'string') {
+        const el = createNode(tag);
+        vnode.el = el;
+        // props
+        if (!isUndef(props)) {
+            const keys = Object.keys(props);
+            for (let index = 0; index < keys.length; index++) {
+                const key = keys[index];
+                const propValue = props[key];
+                const propTypeObj = isObject(propValue);
+                if (key.startsWith('on')) {
+                    addEventListener(el, key, propValue);
+                }
+                if (typeof propValue !== 'function' && key !== 'key' && !isFlag(key)) {
+                    setAttribute(el, key, propValue);
+                }
+                if (key === 'style' && propTypeObj) {
+                    setStyleProp(el, propValue);
+                }
+                // domInfo
+                if (key === '$ref' && propTypeObj) {
+                    domInfo.set(propValue, el);
                 }
             }
-            // children
-            if (!isUndef(children)) {
-                if (!checkVnode(children)) {
-                    if (el) {
-                        updateTextNode(children, el);
-                    }
+        }
+        // children
+        if (!isUndef(children)) {
+            if (isTextChildren(children)) {
+                if (el) {
+                    updateTextNode(children, el);
                 }
-                else {
-                    const childrenType = getType(children);
-                    if (childrenType === 'array') {
-                        for (let index = 0; index < children.length; index++) {
-                            const child = children[index];
-                            if (isVnode(child)) {
-                                mount(child, el);
-                            }
-                        }
-                    }
-                    else if (childrenType === 'object') {
-                        mount(children, el);
-                    }
-                }
-            }
-            if (anchor) {
-                container.insertBefore(el, anchor);
-            }
-            else if (container) {
-                container.appendChild(el);
             }
             else {
-                return el;
+                const childrenObjType = isObject(children);
+                if (Array.isArray(children)) {
+                    for (let index = 0; index < children.length; index++) {
+                        const child = children[index];
+                        if (isVnode(child)) {
+                            mount(child, el);
+                        }
+                    }
+                }
+                else if (childrenObjType) {
+                    mount(children, el);
+                }
             }
         }
-        else if (tagType === 'function') {
-            const param = { content: tag, setData: setData.bind(tag), props };
-            const template = tag.call(tag, param);
-            tag.template = template;
-            const newTree = template();
-            mount(newTree, container);
-            componentMap.set(tag, newTree);
+        if (anchor) {
+            container.insertBefore(el, anchor);
         }
+        else if (container) {
+            container.appendChild(el);
+        }
+        else {
+            return el;
+        }
+    }
+    else if (typeof tag === 'function') {
+        const param = { content: tag, setData: setData.bind(tag), props };
+        const template = tag.call(tag, param);
+        tag.template = template;
+        const newTree = template();
+        mount(newTree, container);
+        componentMap.set(tag, newTree);
     }
 }
 // Diff
 function patch(oNode, nNode, memoFlag) {
     // $once
-    if (oNode.props && oNode.props.hasOwnProperty(flag[1])) {
+    const op = oNode.props;
+    if (op && hasOwn(op, '$once')) {
         return;
     }
     if (!notTagComponent(oNode, nNode)) {
@@ -337,8 +290,8 @@ function patch(oNode, nNode, memoFlag) {
                 removeAttribute(el, key);
                 continue;
             }
-            const newType = getType(newValue);
-            const isFunc = newType === 'function';
+            const newObjType = isObject(newValue);
+            const isFunc = typeof newValue === 'function';
             const isStyle = key === 'style';
             if (isFunc) {
                 if (newValue.toString() !== oldValue.toString()) {
@@ -347,11 +300,11 @@ function patch(oNode, nNode, memoFlag) {
                 }
                 continue;
             }
-            if (isStyle && newType === 'object') {
+            if (isStyle && newObjType) {
                 setStyleProp(el, newValue);
                 continue;
             }
-            const isRegularAttr = key !== 'key' && !flag.includes(key);
+            const isRegularAttr = key !== 'key' && !isFlag(key);
             if (isRegularAttr && !isFunc) {
                 setAttribute(el, key, newValue);
             }
@@ -363,22 +316,23 @@ function patch(oNode, nNode, memoFlag) {
             }
         }
         // $memo
-        if (oNode.props && oNode.props.hasOwnProperty(flag[2])) {
-            if (!oNode.props.$memo[0] && oNode.props.$memo[1] === memoFlag) {
-                memoCreateEl(oNode, nNode);
+        if (op != null && hasOwn(op, '$memo')) {
+            const memo = op.$memo;
+            if (memo[1] === memoFlag && !memo[0]) {
+                memo[2] && memoCreateEl(oNode, nNode);
                 return;
             }
         }
         // children
         const oc = oNode.children;
         const nc = nNode.children;
-        if (getType(oc) === 'array' && getType(nc) === 'array') {
+        if (Array.isArray(oc) && Array.isArray(nc)) {
             patchKeyChildren(oc, nc, el, memoFlag);
         }
         else if (isVnode(oc) && isVnode(nc)) {
             patch(oc, nc, memoFlag);
         }
-        else if (!checkVnode(oc) && !checkVnode(nc) && oc !== nc) {
+        else if (isTextChildren(oc) && isTextChildren(nc) && oc !== nc) {
             updateTextNode(nc, el);
         }
     }
@@ -495,18 +449,27 @@ function patchKeyChildren(n1, n2, parentElm, memoFlag) {
 }
 // Change data
 async function setData(callback, content, memoFlag) {
-    if (typeof callback === 'function' && typeof Promise !== 'undefined') {
-        try {
-            await Promise.resolve(callback());
-            const target = content ? content : this;
-            const newTree = target.template();
-            const oldTree = componentMap.get(target);
-            patch(oldTree, newTree, memoFlag);
-            componentMap.set(target, newTree);
+    if (typeof callback !== 'function')
+        return;
+    try {
+        const callbackPromise = Promise.resolve(callback());
+        if (typeof Promise === 'undefined') {
+            await callbackPromise;
         }
-        catch (err) {
-            warn(err.message);
+        else {
+            await 0;
+            await callbackPromise;
         }
+        const target = content || this;
+        if (!target.template)
+            return;
+        const oldTree = componentMap.get(target);
+        const newTree = target.template();
+        patch(oldTree, newTree, memoFlag);
+        componentMap.set(target, newTree);
+    }
+    catch (err) {
+        warn(err);
     }
 }
 // Normalize Container

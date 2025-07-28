@@ -1,10 +1,3 @@
-export interface vnodeType {
-    tag: any;
-    props: any;
-    children: any;
-    el: any;
-    key: any;
-}
 declare const version: string;
 declare const domInfo: WeakMap<object, any>;
 declare function setData(callback: () => void, content?: any, memoFlag?: symbol): Promise<void>;
