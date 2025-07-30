@@ -463,24 +463,13 @@ function patchKeyChildren(
 }
 
 // Change data
-async function setData(callback: () => void, content?: any, memoFlag?: symbol) {
-  if (typeof callback !== 'function') return;
-
+async function setData(content?: any, memoFlag?: symbol) {
+  const target = content || this;
+  if (!target.template) return;
   try {
-    const callbackPromise = Promise.resolve(callback());
-    if (typeof Promise === 'undefined') {
-      await callbackPromise;
-    } else {
-      await 0;
-      await callbackPromise;
-    }
-
-    const target = content || this;
-    if (!target.template) return;
-
+    await Promise.resolve();
     const oldTree = componentMap.get(target);
     const newTree = target.template();
-
     patch(oldTree, newTree, memoFlag);
     componentMap.set(target, newTree);
   } catch (err) {
