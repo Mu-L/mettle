@@ -1,5 +1,5 @@
 /*!
- * Mettle.js v1.1.1
+ * Mettle.js v1.1.2
  * (c) 2021-2025 maomincoding
  * Released under the MIT License.
  */
@@ -360,7 +360,7 @@ function memoCreateEl(oNode, nNode) {
     }
 }
 // version
-const version = '1.1.1';
+const version = '1.1.2';
 // Flag
 const isFlag = /* @__PURE__ */ makeMap('$ref,$once,$memo');
 // Component
@@ -644,11 +644,9 @@ function patchKeyChildren(n1, n2, parentElm, memoFlag) {
 }
 // Change data
 async function setData(content, memoFlag) {
-    const target = content || this;
-    if (!target.template)
-        return;
     try {
         await Promise.resolve();
+        const target = content || this;
         const oldTree = componentMap.get(target);
         const newTree = target.template();
         patch(oldTree, newTree, memoFlag);

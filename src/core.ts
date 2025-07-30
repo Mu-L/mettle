@@ -464,10 +464,9 @@ function patchKeyChildren(
 
 // Change data
 async function setData(content?: any, memoFlag?: symbol) {
-  const target = content || this;
-  if (!target.template) return;
   try {
     await Promise.resolve();
+    const target = content || this;
     const oldTree = componentMap.get(target);
     const newTree = target.template();
     patch(oldTree, newTree, memoFlag);
