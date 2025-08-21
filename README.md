@@ -2,7 +2,7 @@
 
 # Mettle.js
 
-A approachable, fast, flexible and lightweight JavaScript library for building user interfaces.
+A approachable, fast, flexible JavaScript library for building user interfaces.
 
 - Easier to get started.
 - Blazing Fast Virtual DOM.

@@ -13,12 +13,7 @@ const PROPS_ASSIGN: number = 4;
 const PROP_SET: number = MODE_PROP_SET;
 const PROP_APPEND: number = MODE_PROP_APPEND;
 
-const evaluate = (
-  h: any,
-  built: Array<any>,
-  fields: IArguments,
-  args: Array<any>
-) => {
+const evaluate = (h: any, built: Array<any>, fields: IArguments, args: Array<any>) => {
   let tmp;
 
   built[0] = 0;
@@ -26,9 +21,7 @@ const evaluate = (
   for (let i = 1; i < built.length; i++) {
     const type = built[i++];
 
-    const value = built[i]
-      ? ((built[0] |= type ? 1 : 2), fields[built[i++]])
-      : built[++i];
+    const value = built[i] ? ((built[0] |= type ? 1 : 2), fields[built[i++]]) : built[++i];
 
     if (type === TAG_SET) {
       args[0] = value;
@@ -37,9 +30,9 @@ const evaluate = (
     } else if (type === PROP_SET) {
       (args[1] = args[1] || {})[built[++i]] = value;
     } else if (type === PROP_APPEND) {
-      args[1][built[++i]] += value + "";
+      args[1][built[++i]] += value + '';
     } else if (type) {
-      tmp = h.apply(value, evaluate(h, value, fields, ["", null]));
+      tmp = h.apply(value, evaluate(h, value, fields, ['', null]));
       args.push(tmp);
 
       if (value[0]) {
@@ -58,21 +51,18 @@ const evaluate = (
 
 const build = function (this: any, statics: any) {
   let mode: number = MODE_TEXT;
-  let buffer = "";
-  let quote = "";
+  let buffer = '';
+  let quote = '';
   let current: any = [0];
   let char, propName: number | string;
 
   const commit = (field?: any) => {
-    if (
-      mode === MODE_TEXT &&
-      (field || (buffer = buffer.replace(/^\s*\n\s*|\s*\n\s*$/g, "")))
-    ) {
+    if (mode === MODE_TEXT && (field || (buffer = buffer.replace(/^\s*\n\s*|\s*\n\s*$/g, '')))) {
       current.push(CHILD_APPEND, field, buffer);
     } else if (mode === MODE_TAGNAME && (field || buffer)) {
       current.push(TAG_SET, field, buffer);
       mode = MODE_WHITESPACE;
-    } else if (mode === MODE_WHITESPACE && buffer === "..." && field) {
+    } else if (mode === MODE_WHITESPACE && buffer === '...' && field) {
       current.push(PROPS_ASSIGN, field, 0);
     } else if (mode === MODE_WHITESPACE && buffer && !field) {
       current.push(PROP_SET, 0, true, buffer);
@@ -87,7 +77,7 @@ const build = function (this: any, statics: any) {
       }
     }
 
-    buffer = "";
+    buffer = '';
   };
 
   for (let i = 0; i < statics.length; i++) {
@@ -102,7 +92,7 @@ const build = function (this: any, statics: any) {
       char = statics[i][j];
 
       if (mode === MODE_TEXT) {
-        if (char === "<") {
+        if (char === '<') {
           commit();
           current = [current];
           mode = MODE_TAGNAME;
@@ -110,32 +100,29 @@ const build = function (this: any, statics: any) {
           buffer += char;
         }
       } else if (mode === MODE_COMMENT) {
-        if (buffer === "--" && char === ">") {
+        if (buffer === '--' && char === '>') {
           mode = MODE_TEXT;
-          buffer = "";
+          buffer = '';
         } else {
           buffer = char + buffer[0];
         }
       } else if (quote) {
         if (char === quote) {
-          quote = "";
+          quote = '';
         } else {
           buffer += char;
         }
       } else if (char === '"' || char === "'") {
         quote = char;
-      } else if (char === ">") {
+      } else if (char === '>') {
         commit();
         mode = MODE_TEXT;
       } else if (!mode) {
-      } else if (char === "=") {
+      } else if (char === '=') {
         mode = MODE_PROP_SET;
         propName = buffer;
-        buffer = "";
-      } else if (
-        char === "/" &&
-        (mode < MODE_PROP_SET || statics[i][j + 1] === ">")
-      ) {
+        buffer = '';
+      } else if (char === '/' && (mode < MODE_PROP_SET || statics[i][j + 1] === '>')) {
         commit();
         if (mode === MODE_TAGNAME) {
           current = current[0];
@@ -143,19 +130,14 @@ const build = function (this: any, statics: any) {
         mode = current;
         (current = current[0]).push(CHILD_RECURSE, 0, mode);
         mode = MODE_SLASH;
-      } else if (
-        char === " " ||
-        char === "\t" ||
-        char === "\n" ||
-        char === "\r"
-      ) {
+      } else if (char === ' ' || char === '\t' || char === '\n' || char === '\r') {
         commit();
         mode = MODE_WHITESPACE;
       } else {
         buffer += char;
       }
 
-      if (mode === MODE_TAGNAME && buffer === "!--") {
+      if (mode === MODE_TAGNAME && buffer === '!--') {
         mode = MODE_COMMENT;
         current = current[0];
       }
@@ -189,12 +171,11 @@ const createVNode = function (tag: string, props: any, child: any) {
   let children: any = null;
 
   for (i in props) {
-    if (i === "key") key = props[i];
+    if (i === 'key') key = props[i];
   }
 
   if (arguments.length > 2) {
-    children =
-      arguments.length > 3 ? Array.prototype.slice.call(arguments, 2) : child;
+    children = arguments.length > 3 ? Array.prototype.slice.call(arguments, 2) : child;
   }
 
   // Vnode
@@ -207,4 +188,6 @@ const createVNode = function (tag: string, props: any, child: any) {
   };
 };
 
-export const html = regular.bind(createVNode);
+const html = regular.bind(createVNode);
+
+export { html };

@@ -1,9 +1,3 @@
-export {
-  version,
-  createApp,
-  setData,
-  domInfo,
-  onMounted,
-  onUnmounted,
-  resetView,
-} from '../lib/core.js';
+export * from '../lib/core.js';
+export * from '../lib/signal.js';
+export * from '../lib/immer.js';

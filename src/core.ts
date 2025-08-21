@@ -1,3 +1,5 @@
+import { effect } from './signal';
+
 // https://developer.mozilla.org/en-US/docs/Web/SVG/Element
 const SVG_TAGS =
   'svg,animate,circle,clippath,cursor,image,defs,desc,ellipse,filter,font-face,' +
@@ -51,7 +53,8 @@ interface vnodeType {
 const checkSameVnode = (o: vnodeType, n: vnodeType) => o.tag === n.tag && o.key === n.key;
 const notTagComponent = (oNode: vnodeType, nNode: vnodeType) =>
   typeof oNode.tag !== 'function' && typeof nNode.tag !== 'function';
-const isVnode = (vnode: vnodeType) => vnode != null && (typeof vnode === 'object' ? 'tag' in vnode : false);
+const isVnode = (vnode: vnodeType) =>
+  vnode != null && (typeof vnode === 'object' ? 'tag' in vnode : false);
 const isTextChildren = (children: any) => !isVnode(children) && !Array.isArray(children);
 function warn(msg: any) {
   console.warn(`[Mettle.js warn]: ${msg}`);
@@ -59,13 +62,21 @@ function warn(msg: any) {
 function setStyleProp(el: HTMLElement, prototype: { [key: string]: string }) {
   Object.assign(el.style, prototype);
 }
-function addEventListener(el: HTMLElement, name: string, listener: EventListenerOrEventListenerObject) {
+function addEventListener(
+  el: HTMLElement,
+  name: string,
+  listener: EventListenerOrEventListenerObject
+) {
   if (typeof listener !== 'function') return;
 
   const eventName = name.slice(2).toLowerCase();
   el.addEventListener(eventName, listener);
 }
-function removeEventListener(el: HTMLElement, name: string, listener: EventListenerOrEventListenerObject) {
+function removeEventListener(
+  el: HTMLElement,
+  name: string,
+  listener: EventListenerOrEventListenerObject
+) {
   if (typeof listener !== 'function') return;
 
   const eventName = name.slice(2).toLowerCase();
@@ -183,6 +194,9 @@ let componentMap = new WeakMap();
 // DomInfo
 const domInfo = new WeakMap();
 
+// Memo
+let memoMap = new WeakMap();
+
 // Update text node
 function updateTextNode(val: any, el: Element) {
   el.textContent = val;
@@ -251,12 +265,15 @@ function mount(
       return el;
     }
   } else if (typeof tag === 'function') {
-    const param = { content: tag, setData: setData.bind(tag), props };
+    const param = {
+      content: tag,
+      props,
+      memo: memo.bind(tag),
+    };
     const template = tag.call(tag, param);
-    tag.template = template;
-    const newTree = template();
-    mount(newTree, container);
+    const newTree = effectFn(template, tag);
     componentMap.set(tag, newTree);
+    mount(newTree, container);
   }
 }
 
@@ -328,7 +345,7 @@ function patch(oNode: vnodeType, nNode: vnodeType, memoFlag?: symbol) {
     // $memo
     if (op != null && hasOwn(op, '$memo')) {
       const memo = op.$memo;
-      if (memo[1] === memoFlag && !memo[0]) {
+      if (memoFlag === memo[1] && !memo[0]) {
         memo[2] && memoCreateEl(oNode, nNode);
         return;
       }
@@ -463,17 +480,42 @@ function patchKeyChildren(
 }
 
 // Change data
-async function setData(content?: any, memoFlag?: symbol) {
+function setData(target: any, newTree: vnodeType, memoFlag: any) {
   try {
-    await Promise.resolve();
-    const target = content || this;
     const oldTree = componentMap.get(target);
-    const newTree = target.template();
     patch(oldTree, newTree, memoFlag);
     componentMap.set(target, newTree);
   } catch (err) {
     warn(err);
   }
+}
+
+// Memo
+function memo(fn: any, name: any) {
+  memoMap.set(this, name);
+  if (typeof fn === 'function') {
+    fn();
+  }
+}
+
+// Effect
+function effectFn(template: any, target: any) {
+  let initMode = true;
+  effect(() => {
+    target.template = template;
+    const newTree = template();
+    if (initMode) {
+      initMode = null;
+    } else {
+      const memoFlag = memoMap.get(target);
+      setData(target, newTree, memoFlag);
+      if (memoMap.has(target)) {
+        memoMap = new WeakMap();
+      }
+    }
+  });
+
+  return template();
 }
 
 // Normalize Container
@@ -512,10 +554,13 @@ function normalizeContainer(container: Element | DocumentFragment | Comment | nu
 // Create Mettle application
 function createApp(root: any, container: string) {
   const rootContent = root.tag;
-  const param = { content: rootContent, setData: setData.bind(rootContent), props: root.props };
+  const param = {
+    content: rootContent,
+    props: root.props,
+    memo: memo.bind(rootContent),
+  };
   const template = rootContent.call(rootContent, param);
-  rootContent.template = template;
-  const newTree = template();
+  const newTree = effectFn(template, rootContent);
   const mountNodeEl = normalizeContainer(container);
   mount(newTree, mountNodeEl);
   componentMap.set(rootContent, newTree);
@@ -576,15 +621,14 @@ let _el: any = Object.create(null);
 function resetView(view: any) {
   bindUnmounted();
   _el.innerHTML = '';
-  componentMap = null;
   componentMap = new WeakMap();
-  const param = { content: view, setData: setData.bind(view) };
+  memoMap = new WeakMap();
+  const param = { content: view, memo: memo.bind(view) };
   const template = view.call(view, param);
-  view.template = template;
-  const newTree = template();
+  const newTree = effectFn(template, view);
   mount(newTree, _el);
   componentMap.set(view, newTree);
   bindMounted();
 }
 
-export { version, createApp, setData, domInfo, onMounted, onUnmounted, resetView };
+export { version, createApp, domInfo, onMounted, onUnmounted, resetView };
