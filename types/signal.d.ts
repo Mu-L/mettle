@@ -1,46 +1,102 @@
-export function computed(fn: any, options: any): Computed;
-export function effect(fn: any, options: any): () => void;
-export function batch(fn: any): any;
-export function untracked(fn: any): any;
-export function signal(value: any, options: any): Signal;
-declare function Computed(fn: any, options: any): void;
-declare class Computed {
-    constructor(fn: any, options: any);
-    _fn: any;
-    _sources: any;
+declare const BRAND_SYMBOL: unique symbol;
+type Node = {
+    _source: Signal;
+    _prevSource?: Node;
+    _nextSource?: Node;
+    _target: Computed | Effect;
+    _prevTarget?: Node;
+    _nextTarget?: Node;
+    _version: number;
+    _rollbackNode?: Node;
+};
+declare function batch<T>(fn: () => T): T;
+declare function untracked<T>(fn: () => T): T;
+declare class Signal<T = any> {
+    /** @internal */
+    _value: unknown;
+    /** @internal */
+    _version: number;
+    /** @internal */
+    _node?: Node;
+    /** @internal */
+    _targets?: Node;
+    constructor(value?: T, options?: SignalOptions<T>);
+    /** @internal */
+    _refresh(): boolean;
+    /** @internal */
+    _subscribe(node: Node): void;
+    /** @internal */
+    _unsubscribe(node: Node): void;
+    /** @internal */
+    _watched?(this: Signal<T>): void;
+    /** @internal */
+    _unwatched?(this: Signal<T>): void;
+    subscribe(fn: (value: T) => void): () => void;
+    name?: string;
+    valueOf(): T;
+    toString(): string;
+    toJSON(): T;
+    peek(): T;
+    brand: typeof BRAND_SYMBOL;
+    get value(): T;
+    set value(value: T);
+}
+export interface SignalOptions<T = any> {
+    watched?: (this: Signal<T>) => void;
+    unwatched?: (this: Signal<T>) => void;
+    name?: string;
+}
+/** @internal */
+declare function Signal(this: Signal, value?: unknown, options?: SignalOptions): void;
+declare function signal<T>(value: T, options?: SignalOptions<T>): Signal<T>;
+declare function signal<T = undefined>(): Signal<T | undefined>;
+/** @internal */
+declare class Computed<T = any> extends Signal<T> {
+    _fn: () => T;
+    _sources?: Node;
     _globalVersion: number;
     _flags: number;
-    _watched: any;
-    _unwatched: any;
-    name: any;
-    _refresh(): boolean;
-    _value: any;
-    _subscribe(node: any): void;
-    _unsubscribe(node: any): void;
+    constructor(fn: () => T, options?: SignalOptions<T>);
     _notify(): void;
-    get value(): any;
+    get value(): T;
 }
-declare function Signal(value: any, options: any): void;
-declare class Signal {
-    constructor(value: any, options: any);
-    _value: any;
-    _version: number;
-    _node: any;
-    _targets: any;
-    _watched: any;
-    _unwatched: any;
-    name: any;
-    brand: typeof BRAND_SYMBOL;
-    _refresh(): boolean;
-    _subscribe(node: any): void;
-    _unsubscribe(node: any): void;
-    subscribe(fn: any): () => void;
-    valueOf(): any;
+/** @internal */
+declare function Computed(this: Computed, fn: () => unknown, options?: SignalOptions): void;
+declare namespace Computed {
+    var prototype: Computed<any>;
+}
+interface ReadonlySignal<T = any> {
+    readonly value: T;
+    peek(): T;
+    subscribe(fn: (value: T) => void): () => void;
+    valueOf(): T;
     toString(): string;
-    toJSON(): any;
-    peek(): any;
-    set value(arg: any);
-    get value(): any;
+    toJSON(): T;
+    brand: typeof BRAND_SYMBOL;
 }
-declare const BRAND_SYMBOL: unique symbol;
-export {};
+declare function computed<T>(fn: () => T, options?: SignalOptions<T>): ReadonlySignal<T>;
+type EffectFn = ((this: {
+    dispose: () => void;
+}) => void | (() => void)) | (() => void | (() => void));
+/** @internal */
+declare class Effect {
+    _fn?: EffectFn;
+    _cleanup?: () => void;
+    _sources?: Node;
+    _nextBatchedEffect?: Effect;
+    _flags: number;
+    name?: string;
+    constructor(fn: EffectFn, options?: EffectOptions);
+    _callback(): void;
+    _start(): () => void;
+    _notify(): void;
+    _dispose(): void;
+    dispose(): void;
+}
+export interface EffectOptions {
+    name?: string;
+}
+/** @internal */
+declare function Effect(this: Effect, fn: EffectFn, options?: EffectOptions): void;
+declare function effect(fn: EffectFn, options?: EffectOptions): () => void;
+export { computed, effect, batch, untracked, signal };

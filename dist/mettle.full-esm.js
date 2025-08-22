@@ -1,5 +1,5 @@
 /*!
- * Mettle.js v1.5.0
+ * Mettle.js v1.7.0
  * (c) 2021-2025 maomincoding
  * Released under the MIT License.
  */
@@ -197,6 +197,7 @@ const OUTDATED = 1 << 2;
 const DISPOSED = 1 << 3;
 const HAS_ERROR = 1 << 4;
 const TRACKING = 1 << 5;
+// Batch
 function startBatch() {
     batchDepth++;
 }
@@ -247,6 +248,7 @@ function batch(fn) {
         endBatch();
     }
 }
+// Currently evaluated computed or effect.
 let evalContext = undefined;
 function untracked(fn) {
     const prevContext = evalContext;
@@ -304,6 +306,8 @@ function addDependency(signal) {
     }
     return undefined;
 }
+/** @internal */
+// @ts-ignore: "Cannot redeclare exported variable 'Signal'."
 function Signal(value, options) {
     this._value = value;
     this._version = 0;
@@ -466,6 +470,7 @@ function cleanupSources(target) {
     }
     target._sources = head;
 }
+/** @internal */
 function Computed(fn, options) {
     Signal.call(this, undefined);
     this._fn = fn;
@@ -563,6 +568,7 @@ Object.defineProperty(Computed.prototype, 'value', {
 function computed(fn, options) {
     return new Computed(fn, options);
 }
+// Effect
 function cleanupEffect(effect) {
     const cleanup = effect._cleanup;
     effect._cleanup = undefined;
@@ -605,6 +611,7 @@ function endEffect(prevContext) {
     }
     endBatch();
 }
+/** @internal */
 function Effect(fn, options) {
     this._fn = fn;
     this._cleanup = undefined;
@@ -668,6 +675,7 @@ function effect(fn, options) {
         throw err;
     }
     const dispose = effect._dispose.bind(effect);
+    // @ts-ignore
     dispose[Symbol.dispose] = dispose;
     return dispose;
 }
@@ -834,7 +842,7 @@ function memoCreateEl(oNode, nNode) {
     }
 }
 // version
-const version = '1.5.0';
+const version = '1.7.0';
 // Flag
 const isFlag = /* @__PURE__ */ makeMap('$ref,$once,$memo');
 // Component
@@ -1271,44 +1279,8 @@ function resetView(view) {
 var NOTHING = Symbol.for('immer-nothing');
 var DRAFTABLE = Symbol.for('immer-draftable');
 var DRAFT_STATE = Symbol.for('immer-state');
-var errors = process.env.NODE_ENV !== 'production'
-    ? [
-        function (plugin) {
-            return `The plugin for '${plugin}' has not been loaded into Immer. To enable the plugin, import and call \`enable${plugin}()\` when initializing your application.`;
-        },
-        function (thing) {
-            return `produce can only be called on things that are draftable: plain objects, arrays, Map, Set or classes that are marked with '[immerable]: true'. Got '${thing}'`;
-        },
-        'This object has been frozen and should not be mutated',
-        function (data) {
-            return ('Cannot use a proxy that has been revoked. Did you pass an object from inside an immer function to an async process? ' +
-                data);
-        },
-        'An immer producer returned a new value *and* modified its draft. Either return a new value *or* modify the draft.',
-        'Immer forbids circular references',
-        'The first or second argument to `produce` must be a function',
-        'The third argument to `produce` must be a function or undefined',
-        'First argument to `createDraft` must be a plain object, an array, or an immerable object',
-        'First argument to `finishDraft` must be a draft returned by `createDraft`',
-        function (thing) {
-            return `'current' expects a draft, got: ${thing}`;
-        },
-        'Object.defineProperty() cannot be used on an Immer draft',
-        'Object.setPrototypeOf() cannot be used on an Immer draft',
-        'Immer only supports deleting array indices',
-        "Immer only supports setting array indices and the 'length' property",
-        function (thing) {
-            return `'original' expects a draft, got: ${thing}`;
-        },
-    ]
-    : [];
 function die(error, ...args) {
-    if (process.env.NODE_ENV !== 'production') {
-        const e = errors[error];
-        const msg = typeof e === 'function' ? e.apply(null, args) : e;
-        throw new Error(`[Immer] ${msg}`);
-    }
-    throw new Error(`[Immer] minified error nr: ${error}. Full error at: https://bit.ly/3cXEKWf`);
+    throw new Error(`Error`);
 }
 var getPrototypeOf = Object.getPrototypeOf;
 function isDraft(value) {
@@ -1443,7 +1415,7 @@ function freeze(obj, deep = false) {
     return obj;
 }
 function dontMutateFrozenCollections() {
-    die(2);
+    die();
 }
 function isFrozen(obj) {
     return Object.isFrozen(obj);
@@ -1504,7 +1476,7 @@ function processResult(result, scope) {
     if (isReplaced) {
         if (baseDraft[DRAFT_STATE].modified_) {
             revokeScope(scope);
-            die(4);
+            die();
         }
         if (isDraftable(result)) {
             result = finalize(scope, result);
@@ -1558,8 +1530,6 @@ function finalize(rootScope, value, path) {
     return state.copy_;
 }
 function finalizeProperty(rootScope, parentState, targetObject, prop, childValue, rootPath, targetIsSet) {
-    if (process.env.NODE_ENV !== 'production' && childValue === targetObject)
-        die(5);
     if (isDraft(childValue)) {
         const path = rootPath &&
             parentState &&
@@ -1698,13 +1668,13 @@ var objectTraps = {
         };
     },
     defineProperty() {
-        die(11);
+        die();
     },
     getPrototypeOf(state) {
         return getPrototypeOf(state.base_);
     },
     setPrototypeOf() {
-        die(12);
+        die();
     },
 };
 var arrayTraps = {};
@@ -1715,13 +1685,10 @@ each(objectTraps, (key, fn) => {
     };
 });
 arrayTraps.deleteProperty = function (state, prop) {
-    if (process.env.NODE_ENV !== 'production' && isNaN(parseInt(prop)))
-        die(13);
     return arrayTraps.set.call(this, state, prop, void 0);
 };
 arrayTraps.set = function (state, prop, value) {
-    if (process.env.NODE_ENV !== 'production' && prop !== 'length' && isNaN(parseInt(prop)))
-        die(14);
+    // @ts-ignore
     return objectTraps.set.call(this, state[0], prop, value, state[0]);
 };
 function peek(draft, prop) {
@@ -1759,6 +1726,10 @@ function prepareCopy(state) {
     }
 }
 var Immer2 = class {
+    autoFreeze_;
+    useStrictShallowCopy_;
+    produce;
+    produceWithPatches;
     constructor(config) {
         this.autoFreeze_ = true;
         this.useStrictShallowCopy_ = false;
@@ -1772,9 +1743,9 @@ var Immer2 = class {
                 };
             }
             if (typeof recipe !== 'function')
-                die(6);
+                die();
             if (patchListener !== void 0 && typeof patchListener !== 'function')
-                die(7);
+                die();
             let result;
             if (isDraftable(base)) {
                 const scope = enterScope(this);
@@ -1830,7 +1801,7 @@ var Immer2 = class {
     }
     createDraft(base) {
         if (!isDraftable(base))
-            die(8);
+            die();
         if (isDraft(base))
             base = current(base);
         const scope = enterScope(this);
@@ -1842,7 +1813,7 @@ var Immer2 = class {
     finishDraft(draft, patchListener) {
         const state = draft && draft[DRAFT_STATE];
         if (!state || !state.isManual_)
-            die(9);
+            die();
         const { scope_: scope } = state;
         usePatchesInScope(scope, patchListener);
         return processResult(void 0, scope);

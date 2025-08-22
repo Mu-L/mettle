@@ -1,55 +1,16 @@
 var NOTHING = Symbol.for('immer-nothing');
 var DRAFTABLE = Symbol.for('immer-draftable');
-var DRAFT_STATE = Symbol.for('immer-state');
+var DRAFT_STATE: any = Symbol.for('immer-state');
 
-var errors =
-  process.env.NODE_ENV !== 'production'
-    ? [
-        function (plugin) {
-          return `The plugin for '${plugin}' has not been loaded into Immer. To enable the plugin, import and call \`enable${plugin}()\` when initializing your application.`;
-        },
-        function (thing) {
-          return `produce can only be called on things that are draftable: plain objects, arrays, Map, Set or classes that are marked with '[immerable]: true'. Got '${thing}'`;
-        },
-        'This object has been frozen and should not be mutated',
-        function (data) {
-          return (
-            'Cannot use a proxy that has been revoked. Did you pass an object from inside an immer function to an async process? ' +
-            data
-          );
-        },
-        'An immer producer returned a new value *and* modified its draft. Either return a new value *or* modify the draft.',
-        'Immer forbids circular references',
-        'The first or second argument to `produce` must be a function',
-        'The third argument to `produce` must be a function or undefined',
-        'First argument to `createDraft` must be a plain object, an array, or an immerable object',
-        'First argument to `finishDraft` must be a draft returned by `createDraft`',
-        function (thing) {
-          return `'current' expects a draft, got: ${thing}`;
-        },
-        'Object.defineProperty() cannot be used on an Immer draft',
-        'Object.setPrototypeOf() cannot be used on an Immer draft',
-        'Immer only supports deleting array indices',
-        "Immer only supports setting array indices and the 'length' property",
-        function (thing) {
-          return `'original' expects a draft, got: ${thing}`;
-        },
-      ]
-    : [];
-function die(error, ...args) {
-  if (process.env.NODE_ENV !== 'production') {
-    const e = errors[error];
-    const msg = typeof e === 'function' ? e.apply(null, args) : e;
-    throw new Error(`[Immer] ${msg}`);
-  }
-  throw new Error(`[Immer] minified error nr: ${error}. Full error at: https://bit.ly/3cXEKWf`);
+function die(error: any, ...args: any) {
+  throw new Error(`Error`);
 }
 
 var getPrototypeOf = Object.getPrototypeOf;
-function isDraft(value) {
+function isDraft(value: any) {
   return !!value && !!value[DRAFT_STATE];
 }
-function isDraftable(value) {
+function isDraftable(value: any) {
   if (!value) return false;
   return (
     isPlainObject(value) ||
@@ -61,7 +22,7 @@ function isDraftable(value) {
   );
 }
 var objectCtorString = Object.prototype.constructor.toString();
-function isPlainObject(value) {
+function isPlainObject(value: any) {
   if (!value || typeof value !== 'object') return false;
   const proto = getPrototypeOf(value);
   if (proto === null) {
@@ -71,16 +32,16 @@ function isPlainObject(value) {
   if (Ctor === Object) return true;
   return typeof Ctor == 'function' && Function.toString.call(Ctor) === objectCtorString;
 }
-function each(obj, iter) {
+function each(obj: any, iter: any) {
   if (getArchtype(obj) === 0 /* Object */) {
     Reflect.ownKeys(obj).forEach((key) => {
       iter(key, obj[key], obj);
     });
   } else {
-    obj.forEach((entry, index) => iter(index, entry, obj));
+    obj.forEach((entry: any, index: any) => iter(index, entry, obj));
   }
 }
-function getArchtype(thing) {
+function getArchtype(thing: any) {
   const state = thing[DRAFT_STATE];
   return state
     ? state.type_
@@ -92,35 +53,35 @@ function getArchtype(thing) {
     ? 3 /* Set */
     : 0 /* Object */;
 }
-function has(thing, prop) {
+function has(thing: any, prop: any) {
   return getArchtype(thing) === 2 /* Map */
     ? thing.has(prop)
     : Object.prototype.hasOwnProperty.call(thing, prop);
 }
-function set(thing, propOrOldValue, value) {
+function set(thing: any, propOrOldValue: any, value: any) {
   const t = getArchtype(thing);
   if (t === 2 /* Map */) thing.set(propOrOldValue, value);
   else if (t === 3 /* Set */) {
     thing.add(value);
   } else thing[propOrOldValue] = value;
 }
-function is(x, y) {
+function is(x: any, y: any) {
   if (x === y) {
     return x !== 0 || 1 / x === 1 / y;
   } else {
     return x !== x && y !== y;
   }
 }
-function isMap(target) {
+function isMap(target: any) {
   return target instanceof Map;
 }
-function isSet(target) {
+function isSet(target: any) {
   return target instanceof Set;
 }
-function latest(state) {
+function latest(state: any) {
   return state.copy_ || state.base_;
 }
-function shallowCopy(base, strict) {
+function shallowCopy(base: any, strict: any) {
   if (isMap(base)) {
     return new Map(base);
   }
@@ -134,7 +95,7 @@ function shallowCopy(base, strict) {
     delete descriptors[DRAFT_STATE];
     let keys = Reflect.ownKeys(descriptors);
     for (let i = 0; i < keys.length; i++) {
-      const key = keys[i];
+      const key: any = keys[i];
       const desc = descriptors[key];
       if (desc.writable === false) {
         desc.writable = true;
@@ -158,7 +119,7 @@ function shallowCopy(base, strict) {
     return Object.assign(obj, base);
   }
 }
-function freeze(obj, deep = false) {
+function freeze(obj: any, deep = false) {
   if (isFrozen(obj) || isDraft(obj) || !isDraftable(obj)) return obj;
   if (getArchtype(obj) > 1) {
     obj.set = obj.add = obj.clear = obj.delete = dontMutateFrozenCollections;
@@ -170,12 +131,12 @@ function freeze(obj, deep = false) {
 function dontMutateFrozenCollections() {
   die(2);
 }
-function isFrozen(obj) {
+function isFrozen(obj: any) {
   return Object.isFrozen(obj);
 }
 
-var plugins = {};
-function getPlugin(pluginKey) {
+var plugins: any = {};
+function getPlugin(pluginKey: any) {
   const plugin = plugins[pluginKey];
   if (!plugin) {
     die(0, pluginKey);
@@ -183,11 +144,11 @@ function getPlugin(pluginKey) {
   return plugin;
 }
 
-var currentScope;
+var currentScope: any;
 function getCurrentScope() {
   return currentScope;
 }
-function createScope(parent_, immer_) {
+function createScope(parent_: any, immer_: any): any {
   return {
     drafts_: [],
     parent_,
@@ -196,7 +157,7 @@ function createScope(parent_, immer_) {
     unfinalizedDrafts_: 0,
   };
 }
-function usePatchesInScope(scope, patchListener) {
+function usePatchesInScope(scope: any, patchListener: any) {
   if (patchListener) {
     getPlugin('Patches');
     scope.patches_ = [];
@@ -204,26 +165,26 @@ function usePatchesInScope(scope, patchListener) {
     scope.patchListener_ = patchListener;
   }
 }
-function revokeScope(scope) {
+function revokeScope(scope: any) {
   leaveScope(scope);
   scope.drafts_.forEach(revokeDraft);
   scope.drafts_ = null;
 }
-function leaveScope(scope) {
+function leaveScope(scope: any) {
   if (scope === currentScope) {
     currentScope = scope.parent_;
   }
 }
-function enterScope(immer2) {
+function enterScope(immer2: any) {
   return (currentScope = createScope(currentScope, immer2));
 }
-function revokeDraft(draft) {
+function revokeDraft(draft: any) {
   const state = draft[DRAFT_STATE];
   if (state.type_ === 0 /* Object */ || state.type_ === 1 /* Array */) state.revoke_();
   else state.revoked_ = true;
 }
 
-function processResult(result, scope) {
+function processResult(result: any, scope: any) {
   scope.unfinalizedDrafts_ = scope.drafts_.length;
   const baseDraft = scope.drafts_[0];
   const isReplaced = result !== void 0 && result !== baseDraft;
@@ -253,11 +214,11 @@ function processResult(result, scope) {
   }
   return result !== NOTHING ? result : void 0;
 }
-function finalize(rootScope, value, path) {
+function finalize(rootScope: any, value: any, path?: any): any {
   if (isFrozen(value)) return value;
   const state = value[DRAFT_STATE];
   if (!state) {
-    each(value, (key, childValue) =>
+    each(value, (key: any, childValue: any) =>
       finalizeProperty(rootScope, state, value, key, childValue, path)
     );
     return value;
@@ -278,7 +239,7 @@ function finalize(rootScope, value, path) {
       result.clear();
       isSet2 = true;
     }
-    each(resultEach, (key, childValue) =>
+    each(resultEach, (key: any, childValue: any) =>
       finalizeProperty(rootScope, state, result, key, childValue, path, isSet2)
     );
     maybeFreeze(rootScope, result, false);
@@ -294,15 +255,14 @@ function finalize(rootScope, value, path) {
   return state.copy_;
 }
 function finalizeProperty(
-  rootScope,
-  parentState,
-  targetObject,
-  prop,
-  childValue,
-  rootPath,
-  targetIsSet
-) {
-  if (process.env.NODE_ENV !== 'production' && childValue === targetObject) die(5);
+  rootScope: any,
+  parentState: any,
+  targetObject: any,
+  prop: any,
+  childValue: any,
+  rootPath: any,
+  targetIsSet?: any
+): any {
   if (isDraft(childValue)) {
     const path =
       rootPath &&
@@ -332,15 +292,15 @@ function finalizeProperty(
       maybeFreeze(rootScope, childValue);
   }
 }
-function maybeFreeze(scope, value, deep = false) {
+function maybeFreeze(scope: any, value: any, deep = false) {
   if (!scope.parent_ && scope.immer_.autoFreeze_ && scope.canAutoFreeze_) {
     freeze(value, deep);
   }
 }
 
-function createProxyProxy(base, parent) {
+function createProxyProxy(base: any, parent: any) {
   const isArray = Array.isArray(base);
-  const state = {
+  const state: any = {
     type_: isArray ? 1 /* Array */ : 0 /* Object */,
     scope_: parent ? parent.scope_ : getCurrentScope(),
     modified_: false,
@@ -354,7 +314,7 @@ function createProxyProxy(base, parent) {
     isManual_: false,
   };
   let target = state;
-  let traps = objectTraps;
+  let traps: any = objectTraps;
   if (isArray) {
     target = [state];
     traps = arrayTraps;
@@ -365,7 +325,7 @@ function createProxyProxy(base, parent) {
   return proxy;
 }
 var objectTraps = {
-  get(state, prop) {
+  get(state: any, prop: any) {
     if (prop === DRAFT_STATE) return state;
     const source = latest(state);
     if (!has(source, prop)) {
@@ -381,13 +341,13 @@ var objectTraps = {
     }
     return value;
   },
-  has(state, prop) {
+  has(state: any, prop: any) {
     return prop in latest(state);
   },
-  ownKeys(state) {
+  ownKeys(state: any) {
     return Reflect.ownKeys(latest(state));
   },
-  set(state, prop, value) {
+  set(state: any, prop: any, value?: any) {
     const desc = getDescriptorFromProto(latest(state), prop);
     if (desc?.set) {
       desc.set.call(state.draft_, value);
@@ -415,7 +375,7 @@ var objectTraps = {
     state.assigned_[prop] = true;
     return true;
   },
-  deleteProperty(state, prop) {
+  deleteProperty(state: any, prop: any) {
     if (peek(state.base_, prop) !== void 0 || prop in state.base_) {
       state.assigned_[prop] = false;
       prepareCopy(state);
@@ -428,7 +388,7 @@ var objectTraps = {
     }
     return true;
   },
-  getOwnPropertyDescriptor(state, prop) {
+  getOwnPropertyDescriptor(state: any, prop: any) {
     const owner = latest(state);
     const desc = Reflect.getOwnPropertyDescriptor(owner, prop);
     if (!desc) return desc;
@@ -442,38 +402,37 @@ var objectTraps = {
   defineProperty() {
     die(11);
   },
-  getPrototypeOf(state) {
+  getPrototypeOf(state: any) {
     return getPrototypeOf(state.base_);
   },
   setPrototypeOf() {
     die(12);
   },
 };
-var arrayTraps = {};
-each(objectTraps, (key, fn) => {
+var arrayTraps: any = {};
+each(objectTraps, (key: any, fn: any) => {
   arrayTraps[key] = function () {
     arguments[0] = arguments[0][0];
     return fn.apply(this, arguments);
   };
 });
-arrayTraps.deleteProperty = function (state, prop) {
-  if (process.env.NODE_ENV !== 'production' && isNaN(parseInt(prop))) die(13);
+arrayTraps.deleteProperty = function (state: any, prop: any) {
   return arrayTraps.set.call(this, state, prop, void 0);
 };
-arrayTraps.set = function (state, prop, value) {
-  if (process.env.NODE_ENV !== 'production' && prop !== 'length' && isNaN(parseInt(prop))) die(14);
+arrayTraps.set = function (state: any, prop: any, value: any) {
+  // @ts-ignore
   return objectTraps.set.call(this, state[0], prop, value, state[0]);
 };
-function peek(draft, prop) {
+function peek(draft: any, prop: any) {
   const state = draft[DRAFT_STATE];
   const source = state ? latest(state) : draft;
   return source[prop];
 }
-function readPropFromProto(state, source, prop) {
+function readPropFromProto(state: any, source: any, prop: any) {
   const desc = getDescriptorFromProto(source, prop);
   return desc ? (`value` in desc ? desc.value : desc.get?.call(state.draft_)) : void 0;
 }
-function getDescriptorFromProto(source, prop) {
+function getDescriptorFromProto(source: any, prop: any) {
   if (!(prop in source)) return void 0;
   let proto = getPrototypeOf(source);
   while (proto) {
@@ -483,7 +442,7 @@ function getDescriptorFromProto(source, prop) {
   }
   return void 0;
 }
-function markChanged(state) {
+function markChanged(state: any) {
   if (!state.modified_) {
     state.modified_ = true;
     if (state.parent_) {
@@ -491,23 +450,27 @@ function markChanged(state) {
     }
   }
 }
-function prepareCopy(state) {
+function prepareCopy(state: any) {
   if (!state.copy_) {
     state.copy_ = shallowCopy(state.base_, state.scope_.immer_.useStrictShallowCopy_);
   }
 }
 
-var Immer2 = class {
-  constructor(config) {
+var Immer2: any = class {
+  autoFreeze_: any;
+  useStrictShallowCopy_: boolean;
+  produce: (base: any, recipe: any, patchListener?: any) => any;
+  produceWithPatches: (base: any, recipe: any) => any[] | ((state: any, ...args: any) => any);
+  constructor(config: any) {
     this.autoFreeze_ = true;
     this.useStrictShallowCopy_ = false;
-    this.produce = (base, recipe, patchListener) => {
+    this.produce = (base: any, recipe: any, patchListener: any): any => {
       if (typeof base === 'function' && typeof recipe !== 'function') {
         const defaultBase = recipe;
         recipe = base;
         const self = this;
-        return function curriedProduce(base2 = defaultBase, ...args) {
-          return self.produce(base2, (draft) => recipe.call(this, draft, ...args));
+        return function curriedProduce(base2 = defaultBase, ...args: any[]) {
+          return self.produce(base2, (draft: any) => recipe.call(this, draft, ...args));
         };
       }
       if (typeof recipe !== 'function') die(6);
@@ -532,20 +495,21 @@ var Immer2 = class {
         if (result === NOTHING) result = void 0;
         if (this.autoFreeze_) freeze(result, true);
         if (patchListener) {
-          const p = [];
-          const ip = [];
+          const p: any = [];
+          const ip: any = [];
           getPlugin('Patches').generateReplacementPatches_(base, result, p, ip);
           patchListener(p, ip);
         }
         return result;
       } else die(1, base);
     };
-    this.produceWithPatches = (base, recipe) => {
+    this.produceWithPatches = (base: any, recipe: any) => {
       if (typeof base === 'function') {
-        return (state, ...args) => this.produceWithPatches(state, (draft) => base(draft, ...args));
+        return (state: any, ...args: any) =>
+          this.produceWithPatches(state, (draft: any) => base(draft, ...args));
       }
       let patches, inversePatches;
-      const result = this.produce(base, recipe, (p, ip) => {
+      const result = this.produce(base, recipe, (p: any, ip: any) => {
         patches = p;
         inversePatches = ip;
       });
@@ -555,7 +519,7 @@ var Immer2 = class {
     if (typeof config?.useStrictShallowCopy === 'boolean')
       this.setUseStrictShallowCopy(config.useStrictShallowCopy);
   }
-  createDraft(base) {
+  createDraft(base: any) {
     if (!isDraftable(base)) die(8);
     if (isDraft(base)) base = current(base);
     const scope = enterScope(this);
@@ -564,20 +528,20 @@ var Immer2 = class {
     leaveScope(scope);
     return proxy;
   }
-  finishDraft(draft, patchListener) {
+  finishDraft(draft: any, patchListener: any) {
     const state = draft && draft[DRAFT_STATE];
     if (!state || !state.isManual_) die(9);
     const { scope_: scope } = state;
     usePatchesInScope(scope, patchListener);
     return processResult(void 0, scope);
   }
-  setAutoFreeze(value) {
+  setAutoFreeze(value: any) {
     this.autoFreeze_ = value;
   }
-  setUseStrictShallowCopy(value) {
+  setUseStrictShallowCopy(value: any) {
     this.useStrictShallowCopy_ = value;
   }
-  applyPatches(base, patches) {
+  applyPatches(base: any, patches: any) {
     let i;
     for (i = patches.length - 1; i >= 0; i--) {
       const patch = patches[i];
@@ -593,10 +557,10 @@ var Immer2 = class {
     if (isDraft(base)) {
       return applyPatchesImpl(base, patches);
     }
-    return this.produce(base, (draft) => applyPatchesImpl(draft, patches));
+    return this.produce(base, (draft: any) => applyPatchesImpl(draft, patches));
   }
 };
-function createProxy(value, parent) {
+function createProxy(value: any, parent: any) {
   const draft = isMap(value)
     ? getPlugin('MapSet').proxyMap_(value, parent)
     : isSet(value)
@@ -607,14 +571,14 @@ function createProxy(value, parent) {
   return draft;
 }
 
-function current(value) {
+function current(value: any) {
   if (!isDraft(value)) die(10, value);
   return currentImpl(value);
 }
-function currentImpl(value) {
+function currentImpl(value: any) {
   if (!isDraftable(value) || isFrozen(value)) return value;
   const state = value[DRAFT_STATE];
-  let copy;
+  let copy: any;
   if (state) {
     if (!state.modified_) return state.base_;
     state.finalized_ = true;
@@ -622,7 +586,7 @@ function currentImpl(value) {
   } else {
     copy = shallowCopy(value, true);
   }
-  each(copy, (key, childValue) => {
+  each(copy, (key: any, childValue: any) => {
     set(copy, key, currentImpl(childValue));
   });
   if (state) {
@@ -631,7 +595,7 @@ function currentImpl(value) {
   return copy;
 }
 
-var immer = new Immer2();
-var produce = immer.produce;
+var immer: any = new Immer2();
+var produce: any = immer.produce;
 
 export { produce };

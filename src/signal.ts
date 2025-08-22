@@ -6,6 +6,19 @@ const OUTDATED = 1 << 2;
 const DISPOSED = 1 << 3;
 const HAS_ERROR = 1 << 4;
 const TRACKING = 1 << 5;
+
+type Node = {
+  _source: Signal;
+  _prevSource?: Node;
+  _nextSource?: Node;
+  _target: Computed | Effect;
+  _prevTarget?: Node;
+  _nextTarget?: Node;
+  _version: number;
+  _rollbackNode?: Node;
+};
+
+// Batch
 function startBatch() {
   batchDepth++;
 }
@@ -14,16 +27,21 @@ function endBatch() {
     batchDepth--;
     return;
   }
-  let error;
+
+  let error: unknown;
   let hasError = false;
+
   while (batchedEffect !== undefined) {
-    let effect = batchedEffect;
+    let effect: Effect | undefined = batchedEffect;
     batchedEffect = undefined;
+
     batchIteration++;
+
     while (effect !== undefined) {
-      const next = effect._nextBatchedEffect;
+      const next: Effect | undefined = effect._nextBatchedEffect;
       effect._nextBatchedEffect = undefined;
       effect._flags &= ~NOTIFIED;
+
       if (!(effect._flags & DISPOSED) && needsToRecompute(effect)) {
         try {
           effect._callback();
@@ -39,12 +57,12 @@ function endBatch() {
   }
   batchIteration = 0;
   batchDepth--;
+
   if (hasError) {
     throw error;
   }
 }
-
-function batch(fn) {
+function batch<T>(fn: () => T): T {
   if (batchDepth > 0) {
     return fn();
   }
@@ -56,9 +74,10 @@ function batch(fn) {
   }
 }
 
-let evalContext = undefined;
+// Currently evaluated computed or effect.
+let evalContext: Computed | Effect | undefined = undefined;
 
-function untracked(fn) {
+function untracked<T>(fn: () => T): T {
   const prevContext = evalContext;
   evalContext = undefined;
   try {
@@ -68,15 +87,16 @@ function untracked(fn) {
   }
 }
 
-let batchedEffect = undefined;
+let batchedEffect: Effect | undefined = undefined;
 let batchDepth = 0;
 let batchIteration = 0;
-
 let globalVersion = 0;
-function addDependency(signal) {
+
+function addDependency(signal: Signal): Node | undefined {
   if (evalContext === undefined) {
     return undefined;
   }
+
   let node = signal._node;
   if (node === undefined || node._target !== evalContext) {
     node = {
@@ -89,36 +109,93 @@ function addDependency(signal) {
       _nextTarget: undefined,
       _rollbackNode: node,
     };
+
     if (evalContext._sources !== undefined) {
       evalContext._sources._nextSource = node;
     }
     evalContext._sources = node;
     signal._node = node;
-
     if (evalContext._flags & TRACKING) {
       signal._subscribe(node);
     }
     return node;
   } else if (node._version === -1) {
     node._version = 0;
-
     if (node._nextSource !== undefined) {
       node._nextSource._prevSource = node._prevSource;
+
       if (node._prevSource !== undefined) {
         node._prevSource._nextSource = node._nextSource;
       }
+
       node._prevSource = evalContext._sources;
       node._nextSource = undefined;
-      evalContext._sources._nextSource = node;
+
+      evalContext._sources!._nextSource = node;
       evalContext._sources = node;
     }
-
     return node;
   }
   return undefined;
 }
 
-function Signal(value, options) {
+// Signal
+// @ts-ignore: "Cannot redeclare exported variable 'Signal'."
+declare class Signal<T = any> {
+  /** @internal */
+  _value: unknown;
+
+  /** @internal */
+  _version: number;
+
+  /** @internal */
+  _node?: Node;
+
+  /** @internal */
+  _targets?: Node;
+
+  constructor(value?: T, options?: SignalOptions<T>);
+
+  /** @internal */
+  _refresh(): boolean;
+
+  /** @internal */
+  _subscribe(node: Node): void;
+
+  /** @internal */
+  _unsubscribe(node: Node): void;
+
+  /** @internal */
+  _watched?(this: Signal<T>): void;
+
+  /** @internal */
+  _unwatched?(this: Signal<T>): void;
+
+  subscribe(fn: (value: T) => void): () => void;
+
+  name?: string;
+
+  valueOf(): T;
+
+  toString(): string;
+
+  toJSON(): T;
+
+  peek(): T;
+
+  brand: typeof BRAND_SYMBOL;
+
+  get value(): T;
+  set value(value: T);
+}
+export interface SignalOptions<T = any> {
+  watched?: (this: Signal<T>) => void;
+  unwatched?: (this: Signal<T>) => void;
+  name?: string;
+}
+/** @internal */
+// @ts-ignore: "Cannot redeclare exported variable 'Signal'."
+function Signal(this: Signal, value?: unknown, options?: SignalOptions) {
   this._value = value;
   this._version = 0;
   this._node = undefined;
@@ -136,6 +213,7 @@ Signal.prototype._subscribe = function (node) {
   if (targets !== node && node._prevTarget === undefined) {
     node._nextTarget = targets;
     this._targets = node;
+
     if (targets !== undefined) {
       targets._prevTarget = node;
     } else {
@@ -153,10 +231,12 @@ Signal.prototype._unsubscribe = function (node) {
       prev._nextTarget = next;
       node._prevTarget = undefined;
     }
+
     if (next !== undefined) {
       next._prevTarget = prev;
       node._nextTarget = undefined;
     }
+
     if (node === this._targets) {
       this._targets = next;
       if (next === undefined) {
@@ -201,21 +281,23 @@ Signal.prototype.peek = function () {
   }
 };
 Object.defineProperty(Signal.prototype, 'value', {
-  get() {
+  get(this: Signal) {
     const node = addDependency(this);
     if (node !== undefined) {
       node._version = this._version;
     }
     return this._value;
   },
-  set(value) {
+  set(this: Signal, value) {
     if (value !== this._value) {
       if (batchIteration > 100) {
         throw new Error('Cycle detected');
       }
+
       this._value = value;
       this._version++;
       globalVersion++;
+
       /**@__INLINE__*/ startBatch();
       try {
         for (let node = this._targets; node !== undefined; node = node._nextTarget) {
@@ -227,11 +309,13 @@ Object.defineProperty(Signal.prototype, 'value', {
     }
   },
 });
-function signal(value, options) {
+function signal<T>(value: T, options?: SignalOptions<T>): Signal<T>;
+function signal<T = undefined>(): Signal<T | undefined>;
+function signal<T>(value?: T, options?: SignalOptions<T>): Signal<T> {
   return new Signal(value, options);
 }
 
-function needsToRecompute(target) {
+function needsToRecompute(target: Computed | Effect): boolean {
   for (let node = target._sources; node !== undefined; node = node._nextSource) {
     if (
       node._source._version !== node._version ||
@@ -241,10 +325,9 @@ function needsToRecompute(target) {
       return true;
     }
   }
-
   return false;
 }
-function prepareSources(target) {
+function prepareSources(target: Computed | Effect) {
   for (let node = target._sources; node !== undefined; node = node._nextSource) {
     const rollbackNode = node._source._node;
     if (rollbackNode !== undefined) {
@@ -252,19 +335,22 @@ function prepareSources(target) {
     }
     node._source._node = node;
     node._version = -1;
+
     if (node._nextSource === undefined) {
       target._sources = node;
       break;
     }
   }
 }
-function cleanupSources(target) {
+function cleanupSources(target: Computed | Effect) {
   let node = target._sources;
-  let head = undefined;
+  let head: Node | undefined = undefined;
+
   while (node !== undefined) {
     const prev = node._prevSource;
     if (node._version === -1) {
       node._source._unsubscribe(node);
+
       if (prev !== undefined) {
         prev._nextSource = node._nextSource;
       }
@@ -274,16 +360,33 @@ function cleanupSources(target) {
     } else {
       head = node;
     }
+
     node._source._node = node._rollbackNode;
     if (node._rollbackNode !== undefined) {
       node._rollbackNode = undefined;
     }
+
     node = prev;
   }
+
   target._sources = head;
 }
 
-function Computed(fn, options) {
+// Computed
+/** @internal */
+declare class Computed<T = any> extends Signal<T> {
+  _fn: () => T;
+  _sources?: Node;
+  _globalVersion: number;
+  _flags: number;
+
+  constructor(fn: () => T, options?: SignalOptions<T>);
+
+  _notify(): void;
+  get value(): T;
+}
+/** @internal */
+function Computed(this: Computed, fn: () => unknown, options?: SignalOptions) {
   Signal.call(this, undefined);
   this._fn = fn;
   this._sources = undefined;
@@ -293,16 +396,19 @@ function Computed(fn, options) {
   this._unwatched = options?.unwatched;
   this.name = options?.name;
 }
-Computed.prototype = new Signal();
+Computed.prototype = new Signal() as Computed;
 Computed.prototype._refresh = function () {
   this._flags &= ~NOTIFIED;
+
   if (this._flags & RUNNING) {
     return false;
   }
+
   if ((this._flags & (OUTDATED | TRACKING)) === TRACKING) {
     return true;
   }
   this._flags &= ~OUTDATED;
+
   if (this._globalVersion === globalVersion) {
     return true;
   }
@@ -313,6 +419,7 @@ Computed.prototype._refresh = function () {
     this._flags &= ~RUNNING;
     return true;
   }
+
   const prevContext = evalContext;
   try {
     prepareSources(this);
@@ -347,6 +454,7 @@ Computed.prototype._unsubscribe = function (node) {
     Signal.prototype._unsubscribe.call(this, node);
     if (this._targets === undefined) {
       this._flags &= ~TRACKING;
+
       for (let node = this._sources; node !== undefined; node = node._nextSource) {
         node._source._unsubscribe(node);
       }
@@ -356,13 +464,14 @@ Computed.prototype._unsubscribe = function (node) {
 Computed.prototype._notify = function () {
   if (!(this._flags & NOTIFIED)) {
     this._flags |= OUTDATED | NOTIFIED;
+
     for (let node = this._targets; node !== undefined; node = node._nextTarget) {
       node._target._notify();
     }
   }
 };
 Object.defineProperty(Computed.prototype, 'value', {
-  get() {
+  get(this: Computed) {
     if (this._flags & RUNNING) {
       throw new Error('Cycle detected');
     }
@@ -377,15 +486,28 @@ Object.defineProperty(Computed.prototype, 'value', {
     return this._value;
   },
 });
-function computed(fn, options) {
+interface ReadonlySignal<T = any> {
+  readonly value: T;
+  peek(): T;
+
+  subscribe(fn: (value: T) => void): () => void;
+  valueOf(): T;
+  toString(): string;
+  toJSON(): T;
+  brand: typeof BRAND_SYMBOL;
+}
+function computed<T>(fn: () => T, options?: SignalOptions<T>): ReadonlySignal<T> {
   return new Computed(fn, options);
 }
 
-function cleanupEffect(effect) {
+// Effect
+function cleanupEffect(effect: Effect) {
   const cleanup = effect._cleanup;
   effect._cleanup = undefined;
+
   if (typeof cleanup === 'function') {
     /*@__INLINE__**/ startBatch();
+
     const prevContext = evalContext;
     evalContext = undefined;
     try {
@@ -401,27 +523,54 @@ function cleanupEffect(effect) {
     }
   }
 }
-function disposeEffect(effect) {
+function disposeEffect(effect: Effect) {
   for (let node = effect._sources; node !== undefined; node = node._nextSource) {
     node._source._unsubscribe(node);
   }
   effect._fn = undefined;
   effect._sources = undefined;
+
   cleanupEffect(effect);
 }
-function endEffect(prevContext) {
+function endEffect(this: Effect, prevContext?: Computed | Effect) {
   if (evalContext !== this) {
     throw new Error('Out-of-order effect');
   }
   cleanupSources(this);
   evalContext = prevContext;
+
   this._flags &= ~RUNNING;
   if (this._flags & DISPOSED) {
     disposeEffect(this);
   }
   endBatch();
 }
-function Effect(fn, options) {
+type EffectFn =
+  | ((this: { dispose: () => void }) => void | (() => void))
+  | (() => void | (() => void));
+
+/** @internal */
+declare class Effect {
+  _fn?: EffectFn;
+  _cleanup?: () => void;
+  _sources?: Node;
+  _nextBatchedEffect?: Effect;
+  _flags: number;
+  name?: string;
+
+  constructor(fn: EffectFn, options?: EffectOptions);
+
+  _callback(): void;
+  _start(): () => void;
+  _notify(): void;
+  _dispose(): void;
+  dispose(): void;
+}
+export interface EffectOptions {
+  name?: string;
+}
+/** @internal */
+function Effect(this: Effect, fn: EffectFn, options?: EffectOptions) {
   this._fn = fn;
   this._cleanup = undefined;
   this._sources = undefined;
@@ -434,6 +583,7 @@ Effect.prototype._callback = function () {
   try {
     if (this._flags & DISPOSED) return;
     if (this._fn === undefined) return;
+
     const cleanup = this._fn();
     if (typeof cleanup === 'function') {
       this._cleanup = cleanup;
@@ -450,6 +600,7 @@ Effect.prototype._start = function () {
   this._flags &= ~DISPOSED;
   cleanupEffect(this);
   prepareSources(this);
+
   /*@__INLINE__**/ startBatch();
   const prevContext = evalContext;
   evalContext = this;
@@ -464,6 +615,7 @@ Effect.prototype._notify = function () {
 };
 Effect.prototype._dispose = function () {
   this._flags |= DISPOSED;
+
   if (!(this._flags & RUNNING)) {
     disposeEffect(this);
   }
@@ -471,7 +623,7 @@ Effect.prototype._dispose = function () {
 Effect.prototype.dispose = function () {
   this._dispose();
 };
-function effect(fn, options) {
+function effect(fn: EffectFn, options?: EffectOptions): () => void {
   const effect = new Effect(fn, options);
   try {
     effect._callback();
@@ -480,8 +632,9 @@ function effect(fn, options) {
     throw err;
   }
   const dispose = effect._dispose.bind(effect);
-  dispose[Symbol.dispose] = dispose;
-  return dispose;
+  // @ts-ignore
+  (dispose as any)[Symbol.dispose] = dispose;
+  return dispose as any;
 }
 
 export { computed, effect, batch, untracked, signal };
