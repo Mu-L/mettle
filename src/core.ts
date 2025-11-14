@@ -551,6 +551,7 @@ function normalizeContainer(container: Element | DocumentFragment | Comment | nu
   }
 }
 
+let _el: any = Object.create(null);
 // Create Mettle application
 function createApp(root: any, container: string) {
   const rootContent = root.tag;
@@ -616,17 +617,15 @@ function bindUnmounted() {
   oldunMountedHookCount = unMountedHookCount;
 }
 
-let _el: any = Object.create(null);
 // Reset view
-function resetView(view: any) {
+function resetView(view: any, routerContainer?: string) {
   bindUnmounted();
-  _el.innerHTML = '';
-  componentMap = new WeakMap();
-  memoMap = new WeakMap();
+  const routerContainerEl = routerContainer ? normalizeContainer(routerContainer) : _el;
+  routerContainerEl.innerHTML = '';
   const param = { content: view, memo: memo.bind(view) };
   const template = view.call(view, param);
   const newTree = effectFn(template, view);
-  mount(newTree, _el);
+  mount(newTree, routerContainerEl);
   componentMap.set(view, newTree);
   bindMounted();
 }

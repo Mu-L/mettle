@@ -1,5 +1,5 @@
 /*!
- * Mettle.js v1.7.0
+ * Mettle.js v1.7.1
  * (c) 2021-2025 maomincoding
  * Released under the MIT License.
  */
@@ -655,7 +655,7 @@ function memoCreateEl(oNode, nNode) {
     }
 }
 // version
-const version = '1.7.0';
+const version = '1.7.1';
 // Flag
 const isFlag = /* @__PURE__ */ makeMap('$ref,$once,$memo');
 // Component
@@ -1014,6 +1014,7 @@ function normalizeContainer(container) {
         return null;
     }
 }
+let _el = Object.create(null);
 // Create Mettle application
 function createApp(root, container) {
     const rootContent = root.tag;
@@ -1074,17 +1075,15 @@ function bindUnmounted() {
     }
     oldunMountedHookCount = unMountedHookCount;
 }
-let _el = Object.create(null);
 // Reset view
-function resetView(view) {
+function resetView(view, routerContainer) {
     bindUnmounted();
-    _el.innerHTML = '';
-    componentMap = new WeakMap();
-    memoMap = new WeakMap();
+    const routerContainerEl = routerContainer ? normalizeContainer(routerContainer) : _el;
+    routerContainerEl.innerHTML = '';
     const param = { content: view, memo: memo.bind(view) };
     const template = view.call(view, param);
     const newTree = effectFn(template, view);
-    mount(newTree, _el);
+    mount(newTree, routerContainerEl);
     componentMap.set(view, newTree);
     bindMounted();
 }
