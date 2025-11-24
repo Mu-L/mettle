@@ -1,5 +1,5 @@
 /*!
- * Mettle.js v1.7.3
+ * Mettle.js v1.7.5
  * (c) 2021-2025 maomincoding
  * Released under the MIT License.
  */
@@ -842,7 +842,7 @@ function memoCreateEl(oNode, nNode) {
     }
 }
 // version
-const version = '1.7.3';
+const version = '1.7.5';
 // Flag
 const isFlag = /* @__PURE__ */ makeMap('$ref,$once,$memo');
 // Component
@@ -874,10 +874,7 @@ function mount(vnode, container, anchor) {
                 if (key.startsWith('on')) {
                     addEventListener(el, key, propValue);
                 }
-                if (typeof propValue !== 'function' &&
-                    key !== 'key' &&
-                    !isFlag(key) &&
-                    key !== '_staticFlag') {
+                if (typeof propValue !== 'function' && key !== 'key' && !isFlag(key)) {
                     setAttribute(el, key, propValue);
                 }
                 if (key === 'style' && propTypeObj) {
@@ -938,10 +935,6 @@ function patch(oNode, nNode, memoFlag) {
     const oldProps = oNode.props || {};
     // $once
     if (hasOwn(oldProps, '$once')) {
-        return;
-    }
-    // Static Node
-    if (hasOwn(oldProps, '_staticFlag') && (typeof oNode.children === 'string' || !oNode.children)) {
         return;
     }
     if (!notTagComponent(oNode, nNode)) {

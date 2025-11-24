@@ -225,12 +225,7 @@ function mount(
         if (key.startsWith('on')) {
           addEventListener(el, key, propValue);
         }
-        if (
-          typeof propValue !== 'function' &&
-          key !== 'key' &&
-          !isFlag(key) &&
-          key !== '_staticFlag'
-        ) {
+        if (typeof propValue !== 'function' && key !== 'key' && !isFlag(key)) {
           setAttribute(el, key, propValue);
         }
         if (key === 'style' && propTypeObj) {
@@ -287,10 +282,6 @@ function patch(oNode: vnodeType, nNode: vnodeType, memoFlag?: symbol) {
   const oldProps = oNode.props || {};
   // $once
   if (hasOwn(oldProps, '$once')) {
-    return;
-  }
-  // Static Node
-  if (hasOwn(oldProps, '_staticFlag') && (typeof oNode.children === 'string' || !oNode.children)) {
     return;
   }
   if (!notTagComponent(oNode, nNode)) {
