@@ -1,5 +1,5 @@
 /*!
- * Mettle.js v1.7.1
+ * Mettle.js v1.7.3
  * (c) 2021-2025 maomincoding
  * Released under the MIT License.
  */
@@ -848,7 +848,7 @@
         }
     }
     // version
-    const version = '1.7.1';
+    const version = '1.7.3';
     // Flag
     const isFlag = /* @__PURE__ */ makeMap('$ref,$once,$memo');
     // Component
@@ -880,7 +880,10 @@
                     if (key.startsWith('on')) {
                         addEventListener(el, key, propValue);
                     }
-                    if (typeof propValue !== 'function' && key !== 'key' && !isFlag(key)) {
+                    if (typeof propValue !== 'function' &&
+                        key !== 'key' &&
+                        !isFlag(key) &&
+                        key !== '_staticFlag') {
                         setAttribute(el, key, propValue);
                     }
                     if (key === 'style' && propTypeObj) {
@@ -938,9 +941,13 @@
     }
     // Diff
     function patch(oNode, nNode, memoFlag) {
+        const oldProps = oNode.props || {};
         // $once
-        const op = oNode.props;
-        if (op && hasOwn(op, '$once')) {
+        if (hasOwn(oldProps, '$once')) {
+            return;
+        }
+        // Static Node
+        if (hasOwn(oldProps, '_staticFlag') && (typeof oNode.children === 'string' || !oNode.children)) {
             return;
         }
         if (!notTagComponent(oNode, nNode)) {
@@ -1004,8 +1011,8 @@
                 }
             }
             // $memo
-            if (op != null && hasOwn(op, '$memo')) {
-                const memo = op.$memo;
+            if (hasOwn(oldProps, '$memo')) {
+                const memo = oldProps.$memo;
                 if (memoFlag === memo[1] && !memo[0]) {
                     memo[2] && memoCreateEl(oNode, nNode);
                     return;
