@@ -1,5 +1,5 @@
 /*!
- * Mettle.js v1.7.5
+ * Mettle.js v1.7.6
  * (c) 2021-2025 maomincoding
  * Released under the MIT License.
  */
@@ -655,7 +655,7 @@ function memoCreateEl(oNode, nNode) {
     }
 }
 // version
-const version = '1.7.5';
+const version = '1.7.6';
 // Flag
 const isFlag = /* @__PURE__ */ makeMap('$ref,$once,$memo');
 // Component
@@ -732,12 +732,7 @@ function mount(vnode, container, anchor) {
         }
     }
     else if (typeof tag === 'function') {
-        const param = {
-            content: tag,
-            props,
-            memo: memo.bind(tag),
-        };
-        const template = tag.call(tag, param);
+        const template = tag.call(tag, props, tag, memo.bind(tag));
         const newTree = effectFn(template, tag);
         componentMap.set(tag, newTree);
         mount(newTree, container);
@@ -1018,12 +1013,7 @@ let _el = Object.create(null);
 // Create Mettle application
 function createApp(root, container) {
     const rootContent = root.tag;
-    const param = {
-        content: rootContent,
-        props: root.props,
-        memo: memo.bind(rootContent),
-    };
-    const template = rootContent.call(rootContent, param);
+    const template = rootContent.call(rootContent, root.props, rootContent, memo.bind(rootContent));
     const newTree = effectFn(template, rootContent);
     const mountNodeEl = normalizeContainer(container);
     mount(newTree, mountNodeEl);
@@ -1080,8 +1070,7 @@ function resetView(view, routerContainer) {
     bindUnmounted();
     const routerContainerEl = routerContainer ? normalizeContainer(routerContainer) : _el;
     routerContainerEl.innerHTML = '';
-    const param = { content: view, memo: memo.bind(view) };
-    const template = view.call(view, param);
+    const template = view.call(view, view, memo.bind(view));
     const newTree = effectFn(template, view);
     mount(newTree, routerContainerEl);
     componentMap.set(view, newTree);

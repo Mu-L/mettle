@@ -265,12 +265,7 @@ function mount(
       return el;
     }
   } else if (typeof tag === 'function') {
-    const param = {
-      content: tag,
-      props,
-      memo: memo.bind(tag),
-    };
-    const template = tag.call(tag, param);
+    const template = tag.call(tag, props, tag, memo.bind(tag));
     const newTree = effectFn(template, tag);
     componentMap.set(tag, newTree);
     mount(newTree, container);
@@ -555,12 +550,7 @@ let _el: any = Object.create(null);
 // Create Mettle application
 function createApp(root: any, container: string) {
   const rootContent = root.tag;
-  const param = {
-    content: rootContent,
-    props: root.props,
-    memo: memo.bind(rootContent),
-  };
-  const template = rootContent.call(rootContent, param);
+  const template = rootContent.call(rootContent, root.props, rootContent, memo.bind(rootContent));
   const newTree = effectFn(template, rootContent);
   const mountNodeEl = normalizeContainer(container);
   mount(newTree, mountNodeEl);
@@ -622,8 +612,7 @@ function resetView(view: any, routerContainer?: string) {
   bindUnmounted();
   const routerContainerEl = routerContainer ? normalizeContainer(routerContainer) : _el;
   routerContainerEl.innerHTML = '';
-  const param = { content: view, memo: memo.bind(view) };
-  const template = view.call(view, param);
+  const template = view.call(view, view, memo.bind(view));
   const newTree = effectFn(template, view);
   mount(newTree, routerContainerEl);
   componentMap.set(view, newTree);
